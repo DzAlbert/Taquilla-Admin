@@ -14,10 +14,10 @@ export function filterLotteries(
     const term = searchTerm.toLowerCase()
     filtered = filtered.filter(
       (lottery) =>
-        lottery.name.toLowerCase().includes(term) ||
-        lottery.openingTime.includes(term) ||
-        lottery.closingTime.includes(term) ||
-        lottery.drawTime.includes(term)
+        lottery.name?.toLowerCase().includes(term) ||
+        lottery.openingTime?.includes(term) ||
+        lottery.closingTime?.includes(term) ||
+        lottery.drawTime?.includes(term)
     )
   }
 
@@ -48,9 +48,9 @@ export function filterBets(
     const term = searchTerm.toLowerCase()
     filtered = filtered.filter(
       (bet) =>
-        bet.lotteryName.toLowerCase().includes(term) ||
-        bet.animalName.toLowerCase().includes(term) ||
-        bet.animalNumber.includes(term)
+        bet.lotteryName?.toLowerCase().includes(term) ||
+        bet.animalName?.toLowerCase().includes(term) ||
+        bet.animalNumber?.includes(term)
     )
   }
 
@@ -87,8 +87,8 @@ export function filterUsers(
     const term = searchTerm.toLowerCase()
     filtered = filtered.filter(
       (user) =>
-        user.name.toLowerCase().includes(term) ||
-        user.email.toLowerCase().includes(term)
+        user.name?.toLowerCase().includes(term) ||
+        user.email?.toLowerCase().includes(term)
     )
   }
 
@@ -112,8 +112,8 @@ export function filterRoles(
   const term = searchTerm.toLowerCase()
   return roles.filter(
     (role) =>
-      role.name.toLowerCase().includes(term) ||
-      role.description.toLowerCase().includes(term) ||
-      role.permissions.some((perm) => perm.toLowerCase().includes(term))
+      role.name?.toLowerCase().includes(term) ||
+      role.description?.toLowerCase().includes(term) ||
+      role.permissions?.some((perm) => perm?.toLowerCase().includes(term))
   )
 }
