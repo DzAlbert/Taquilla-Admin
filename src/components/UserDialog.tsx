@@ -21,6 +21,7 @@ interface UserDialogProps {
 export function UserDialog({ open, onOpenChange, user, roles, currentUserId, onSave }: UserDialogProps) {
   const [name, setName] = useState(user?.name || "")
   const [email, setEmail] = useState(user?.email || "")
+  const [password, setPassword] = useState(user?.password || "")
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>(user?.roleIds || [])
   const [isActive, setIsActive] = useState(user?.isActive ?? true)
 
@@ -28,11 +29,13 @@ export function UserDialog({ open, onOpenChange, user, roles, currentUserId, onS
     if (open && user) {
       setName(user.name)
       setEmail(user.email)
+      setPassword(user.password || "")
       setSelectedRoleIds(user.roleIds)
       setIsActive(user.isActive)
     } else if (open && !user) {
       setName("")
       setEmail("")
+      setPassword("")
       setSelectedRoleIds([])
       setIsActive(true)
     }
@@ -49,10 +52,21 @@ export function UserDialog({ open, onOpenChange, user, roles, currentUserId, onS
       return
     }
 
+    const hasAdminRole = selectedRoleIds.some((roleId) => {
+      const role = roles.find((r) => r.id === roleId)
+      return role?.permissions.includes("users") || role?.permissions.includes("roles")
+    })
+
+    if (hasAdminRole && !password && !user) {
+      toast.error("Los usuarios con permisos administrativos requieren una contraseña")
+      return
+    }
+
     const userData: User = {
       id: user?.id || Date.now().toString(),
       name,
       email,
+      password: password || undefined,
       roleIds: selectedRoleIds,
       isActive,
       createdAt: user?.createdAt || new Date().toISOString(),
@@ -102,6 +116,25 @@ export function UserDialog({ open, onOpenChange, user, roles, currentUserId, onS
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="user-password">Contraseña Predeterminada</Label>
+            <Input
+              id="user-password"
+              type="password"
+              placeholder="Ingrese una contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {selectedRoleIds.some((roleId) => {
+                const role = roles.find((r) => r.id === roleId)
+                return role?.permissions.includes("users") || role?.permissions.includes("roles")
+              })
+                ? "⚠️ Requerido para usuarios con permisos administrativos"
+                : "Opcional para otros roles"}
+            </p>
           </div>
 
           <div className="flex items-center justify-between">

@@ -14,12 +14,27 @@ interface LoginScreenProps {
 
 export function LoginScreen({ users, onLogin }: LoginScreenProps) {
   const [selectedUserId, setSelectedUserId] = useState("")
+  const [password, setPassword] = useState("")
 
   const activeUsers = users.filter((u) => u.isActive)
+  const selectedUser = activeUsers.find((u) => u.id === selectedUserId)
 
   const handleLogin = () => {
-    if (selectedUserId) {
-      onLogin(selectedUserId)
+    if (!selectedUserId) return
+
+    if (selectedUser?.password) {
+      if (password !== selectedUser.password) {
+        alert("Contraseña incorrecta")
+        return
+      }
+    }
+
+    onLogin(selectedUserId)
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && selectedUserId) {
+      handleLogin()
     }
   }
 
@@ -63,24 +78,30 @@ export function LoginScreen({ users, onLogin }: LoginScreenProps) {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña (simulada)</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Ingrese su contraseña"
-                  defaultValue="demo"
-                  disabled
-                />
-                <p className="text-xs text-muted-foreground">
-                  En esta demo, la autenticación está simplificada.
+              {selectedUser?.password && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Ingrese su contraseña"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                  />
+                </div>
+              )}
+
+              {selectedUser && !selectedUser.password && (
+                <p className="text-xs text-muted-foreground text-center py-2 bg-muted rounded-lg">
+                  Este usuario no requiere contraseña
                 </p>
-              </div>
+              )}
 
               <Button
                 className="w-full"
                 onClick={handleLogin}
-                disabled={!selectedUserId}
+                disabled={!selectedUserId || (!!selectedUser?.password && !password)}
               >
                 Iniciar Sesión
               </Button>

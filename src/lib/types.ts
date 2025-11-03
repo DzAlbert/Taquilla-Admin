@@ -85,6 +85,7 @@ export interface User {
   id: string
   name: string
   email: string
+  password?: string
   roleIds: string[]
   isActive: boolean
   createdAt: string
