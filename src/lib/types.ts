@@ -65,6 +65,7 @@ export interface Withdrawal {
 
 export type ModulePermission = 
   | "dashboard"
+  | "reports"
   | "lotteries"
   | "bets"
   | "winners"

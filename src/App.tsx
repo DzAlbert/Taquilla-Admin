@@ -19,8 +19,9 @@ import { DrawDialog } from "@/components/DrawDialog"
 import { RoleDialog } from "@/components/RoleDialog"
 import { UserDialog } from "@/components/UserDialog"
 import { LoginScreen } from "@/components/LoginScreen"
+import { ReportsCard } from "@/components/ReportsCard"
 import { useAuth } from "@/hooks/use-auth"
-import { Plus, Ticket, Trophy, Vault, ListBullets, Calendar, Pencil, Trash, Users, ShieldCheck, SignOut, MagnifyingGlass, Funnel } from "@phosphor-icons/react"
+import { Plus, Ticket, Trophy, Vault, ListBullets, Calendar, Pencil, Trash, Users, ShieldCheck, SignOut, MagnifyingGlass, Funnel, ChartLine } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import { Toaster } from "@/components/ui/sonner"
 import { format } from "date-fns"
@@ -78,7 +79,7 @@ function App() {
           id: "admin",
           name: "Administrador",
           description: "Acceso completo al sistema",
-          permissions: ["dashboard", "lotteries", "bets", "winners", "history", "users", "roles"],
+          permissions: ["dashboard", "reports", "lotteries", "bets", "winners", "history", "users", "roles"],
           createdAt: new Date().toISOString(),
           isSystem: true,
         },
@@ -86,7 +87,7 @@ function App() {
           id: "vendor",
           name: "Vendedor",
           description: "Puede registrar jugadas y ver loterías",
-          permissions: ["lotteries", "bets"],
+          permissions: ["lotteries", "bets", "reports"],
           createdAt: new Date().toISOString(),
           isSystem: true,
         },
@@ -321,11 +322,17 @@ function App() {
 
       <div className="container mx-auto px-4 py-6">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             {hasPermission("dashboard") && (
               <TabsTrigger value="dashboard">
                 <Vault className="mr-2" />
                 Dashboard
+              </TabsTrigger>
+            )}
+            {hasPermission("reports") && (
+              <TabsTrigger value="reports">
+                <ChartLine className="mr-2" />
+                Reportes
               </TabsTrigger>
             )}
             {hasPermission("lotteries") && (
@@ -422,6 +429,15 @@ function App() {
                 </AlertDescription>
               </Alert>
             )}
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold">Reportes y Estadísticas</h2>
+              <p className="text-muted-foreground">Análisis en tiempo real de ventas y premios</p>
+            </div>
+
+            <ReportsCard bets={currentBets} draws={currentDraws} lotteries={currentLotteries} />
           </TabsContent>
 
           <TabsContent value="lotteries" className="space-y-6">

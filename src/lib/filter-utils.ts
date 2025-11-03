@@ -15,9 +15,9 @@ export function filterLotteries(
     filtered = filtered.filter(
       (lottery) =>
         lottery.name?.toLowerCase().includes(term) ||
-        lottery.openingTime?.includes(term) ||
-        lottery.closingTime?.includes(term) ||
-        lottery.drawTime?.includes(term)
+        lottery.openingTime?.toLowerCase().includes(term) ||
+        lottery.closingTime?.toLowerCase().includes(term) ||
+        lottery.drawTime?.toLowerCase().includes(term)
     )
   }
 
