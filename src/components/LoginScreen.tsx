@@ -53,27 +53,27 @@ export function LoginScreen({ users, onLogin }: LoginScreenProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <UserCircle className="h-10 w-10 text-primary" weight="fill" />
+            <div className="h-12 w-12 md:h-16 md:w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <UserCircle className="h-8 w-8 md:h-10 md:w-10 text-primary" weight="fill" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Sistema Administrativo</CardTitle>
-          <CardDescription>Lotería de Animalitos</CardDescription>
+          <CardTitle className="text-xl md:text-2xl">Sistema Administrativo</CardTitle>
+          <CardDescription className="text-xs md:text-sm">Lotería de Animalitos</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {activeUsers.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">
+              <p className="text-muted-foreground mb-4 text-sm md:text-base">
                 No hay usuarios activos en el sistema.
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs md:text-sm text-muted-foreground">
                 Un administrador debe crear usuarios primero.
               </p>
             </div>
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="user-select">Seleccione su usuario</Label>
+                <Label htmlFor="user-select" className="text-sm md:text-base">Seleccione su usuario</Label>
                 <Select value={selectedUserId} onValueChange={handleUserChange}>
                   <SelectTrigger id="user-select">
                     <SelectValue placeholder="Seleccione un usuario" />
@@ -89,7 +89,7 @@ export function LoginScreen({ users, onLogin }: LoginScreenProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password" className="text-sm md:text-base">Contraseña</Label>
                 <Input
                   id="password"
                   type="text"

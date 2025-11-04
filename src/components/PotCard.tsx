@@ -30,8 +30,8 @@ export function PotCard({ pot, index, onTransfer, onWithdraw }: PotCardProps) {
           <CardDescription>{pot.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-3xl font-semibold tabular-nums">{formatCurrency(pot.balance)}</div>
-          <div className="flex gap-2">
+          <div className="text-2xl md:text-3xl font-semibold tabular-nums">{formatCurrency(pot.balance)}</div>
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               size="sm"

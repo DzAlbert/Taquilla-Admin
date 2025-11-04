@@ -131,17 +131,17 @@ export function ReportsCard({ bets, draws, lotteries }: ReportsCardProps) {
   const peakHour = hourlyData.length > 0 ? hourlyData.reduce((max, curr) => (curr.bets > max.bets ? curr : max)) : null
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-4 md:space-y-6">
+      <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Ventas de Hoy</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">{formatCurrency(todayStats.totalSales)}</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Ventas de Hoy</CardDescription>
+            <CardTitle className="text-2xl md:text-3xl tabular-nums">{formatCurrency(todayStats.totalSales)}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-xs md:text-sm">
               {getTrendIcon(todayStats.totalSales, weekStats.totalSales / 7)}
-              <span className="text-muted-foreground">
+              <span className="text-muted-foreground truncate">
                 vs promedio semanal ({formatCurrency(weekStats.totalSales / 7)})
               </span>
             </div>
@@ -150,13 +150,13 @@ export function ReportsCard({ bets, draws, lotteries }: ReportsCardProps) {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Jugadas de Hoy</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">{todayStats.totalBets}</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Jugadas de Hoy</CardDescription>
+            <CardTitle className="text-2xl md:text-3xl tabular-nums">{todayStats.totalBets}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-xs md:text-sm">
               {getTrendIcon(todayStats.totalBets, weekStats.totalBets / 7)}
-              <span className="text-muted-foreground">
+              <span className="text-muted-foreground truncate">
                 vs promedio semanal ({Math.round(weekStats.totalBets / 7)})
               </span>
             </div>
@@ -165,11 +165,11 @@ export function ReportsCard({ bets, draws, lotteries }: ReportsCardProps) {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Premios Pagados Hoy</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">{formatCurrency(todayStats.totalPayout)}</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Premios Pagados Hoy</CardDescription>
+            <CardTitle className="text-2xl md:text-3xl tabular-nums">{formatCurrency(todayStats.totalPayout)}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-xs md:text-sm">
               <span className="text-muted-foreground">{todayStats.winners} ganadores</span>
             </div>
           </CardContent>
@@ -177,11 +177,11 @@ export function ReportsCard({ bets, draws, lotteries }: ReportsCardProps) {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Ganancia Neta Hoy</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">{formatCurrency(todayStats.netProfit)}</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Ganancia Neta Hoy</CardDescription>
+            <CardTitle className="text-2xl md:text-3xl tabular-nums">{formatCurrency(todayStats.netProfit)}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-xs md:text-sm">
               <span className="text-muted-foreground">
                 Margen: {todayStats.totalSales > 0 ? ((todayStats.netProfit / todayStats.totalSales) * 100).toFixed(1) : 0}%
               </span>
@@ -190,7 +190,7 @@ export function ReportsCard({ bets, draws, lotteries }: ReportsCardProps) {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Resumen por Período</CardTitle>
@@ -308,7 +308,7 @@ export function ReportsCard({ bets, draws, lotteries }: ReportsCardProps) {
             {topLotteries.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No hay datos de ventas</p>
             ) : (
-              <ScrollArea className="h-[400px]">
+              <ScrollArea className="h-[300px] md:h-[400px]">
                 <div className="space-y-3">
                   {topLotteries.map((lottery, index) => (
                     <div key={lottery.name} className="flex items-center gap-3">
@@ -329,7 +329,7 @@ export function ReportsCard({ bets, draws, lotteries }: ReportsCardProps) {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Animalitos Más Jugados</CardTitle>
@@ -339,7 +339,7 @@ export function ReportsCard({ bets, draws, lotteries }: ReportsCardProps) {
             {topAnimals.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No hay datos de jugadas</p>
             ) : (
-              <ScrollArea className="h-[350px]">
+              <ScrollArea className="h-[280px] md:h-[350px]">
                 <div className="space-y-2">
                   {topAnimals.map((animal, index) => (
                     <div key={animal.number} className="flex items-center justify-between p-2 rounded-lg border">

@@ -358,16 +358,16 @@ function App() {
       <Toaster position="top-right" />
 
       <div className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight">Sistema Administrativo</h1>
-              <p className="text-muted-foreground mt-1">Lotería de Animalitos</p>
+        <div className="container mx-auto px-4 py-3 md:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-semibold tracking-tight truncate">Sistema Administrativo</h1>
+              <p className="text-muted-foreground mt-0.5 md:mt-1 text-xs md:text-sm">Lotería de Animalitos</p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium">{currentUser.name}</p>
-                <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+            <div className="flex items-center gap-2 md:gap-4 shrink-0">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-medium truncate max-w-[150px] md:max-w-none">{currentUser.name}</p>
+                <p className="text-xs text-muted-foreground truncate max-w-[150px] md:max-w-none">{currentUser.email}</p>
               </div>
               <Button variant="outline" size="icon" onClick={handleLogout}>
                 <SignOut />
@@ -377,74 +377,76 @@ function App() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9">
-            {hasPermission("dashboard") && (
-              <TabsTrigger value="dashboard">
-                <Vault className="mr-2" />
-                Dashboard
-              </TabsTrigger>
-            )}
-            {hasPermission("reports") && (
-              <TabsTrigger value="reports">
-                <ChartLine className="mr-2" />
-                Reportes
-              </TabsTrigger>
-            )}
-            {hasPermission("lotteries") && (
-              <TabsTrigger value="lotteries">
-                <Calendar className="mr-2" />
-                Loterías
-              </TabsTrigger>
-            )}
-            {hasPermission("bets") && (
-              <TabsTrigger value="bets">
-                <Ticket className="mr-2" />
-                Jugadas
-              </TabsTrigger>
-            )}
-            {hasPermission("winners") && (
-              <TabsTrigger value="winners">
-                <Trophy className="mr-2" />
-                Ganadores
-              </TabsTrigger>
-            )}
-            {hasPermission("history") && (
-              <TabsTrigger value="history">
-                <ListBullets className="mr-2" />
-                Historial
-              </TabsTrigger>
-            )}
-            {hasPermission("users") && (
-              <TabsTrigger value="users">
-                <Users className="mr-2" />
-                Usuarios
-              </TabsTrigger>
-            )}
-            {hasPermission("roles") && (
-              <TabsTrigger value="roles">
-                <ShieldCheck className="mr-2" />
-                Roles
-              </TabsTrigger>
-            )}
-            {hasPermission("api-keys") && (
-              <TabsTrigger value="api-keys">
-                <Key className="mr-2" />
-                API Keys
-              </TabsTrigger>
-            )}
-          </TabsList>
+      <div className="container mx-auto px-2 sm:px-4 py-4 md:py-6">
+        <Tabs defaultValue="dashboard" className="space-y-4 md:space-y-6">
+          <ScrollArea className="w-full">
+            <TabsList className="inline-flex w-auto min-w-full h-auto flex-wrap gap-1 p-1">
+              {hasPermission("dashboard") && (
+                <TabsTrigger value="dashboard" className="flex-shrink-0">
+                  <Vault className="md:mr-2" />
+                  <span className="hidden md:inline">Dashboard</span>
+                </TabsTrigger>
+              )}
+              {hasPermission("reports") && (
+                <TabsTrigger value="reports" className="flex-shrink-0">
+                  <ChartLine className="md:mr-2" />
+                  <span className="hidden md:inline">Reportes</span>
+                </TabsTrigger>
+              )}
+              {hasPermission("lotteries") && (
+                <TabsTrigger value="lotteries" className="flex-shrink-0">
+                  <Calendar className="md:mr-2" />
+                  <span className="hidden md:inline">Loterías</span>
+                </TabsTrigger>
+              )}
+              {hasPermission("bets") && (
+                <TabsTrigger value="bets" className="flex-shrink-0">
+                  <Ticket className="md:mr-2" />
+                  <span className="hidden md:inline">Jugadas</span>
+                </TabsTrigger>
+              )}
+              {hasPermission("winners") && (
+                <TabsTrigger value="winners" className="flex-shrink-0">
+                  <Trophy className="md:mr-2" />
+                  <span className="hidden md:inline">Ganadores</span>
+                </TabsTrigger>
+              )}
+              {hasPermission("history") && (
+                <TabsTrigger value="history" className="flex-shrink-0">
+                  <ListBullets className="md:mr-2" />
+                  <span className="hidden md:inline">Historial</span>
+                </TabsTrigger>
+              )}
+              {hasPermission("users") && (
+                <TabsTrigger value="users" className="flex-shrink-0">
+                  <Users className="md:mr-2" />
+                  <span className="hidden md:inline">Usuarios</span>
+                </TabsTrigger>
+              )}
+              {hasPermission("roles") && (
+                <TabsTrigger value="roles" className="flex-shrink-0">
+                  <ShieldCheck className="md:mr-2" />
+                  <span className="hidden md:inline">Roles</span>
+                </TabsTrigger>
+              )}
+              {hasPermission("api-keys") && (
+                <TabsTrigger value="api-keys" className="flex-shrink-0">
+                  <Key className="md:mr-2" />
+                  <span className="hidden md:inline">API Keys</span>
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </ScrollArea>
 
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="flex items-center justify-between">
+          <TabsContent value="dashboard" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-semibold">Balance de Potes</h2>
-                <p className="text-muted-foreground">Gestión de fondos del sistema</p>
+                <h2 className="text-xl md:text-2xl font-semibold">Balance de Potes</h2>
+                <p className="text-muted-foreground text-sm">Gestión de fondos del sistema</p>
               </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {currentPots.map((pot, index) => (
                 <PotCard
                   key={index}
@@ -456,7 +458,7 @@ function App() {
               ))}
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <Card>
                 <CardHeader>
                   <CardTitle>Loterías Activas</CardTitle>
@@ -494,10 +496,10 @@ function App() {
             )}
           </TabsContent>
 
-          <TabsContent value="reports" className="space-y-6">
+          <TabsContent value="reports" className="space-y-4 md:space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold">Reportes y Estadísticas</h2>
-              <p className="text-muted-foreground">Análisis en tiempo real de ventas y premios</p>
+              <h2 className="text-xl md:text-2xl font-semibold">Reportes y Estadísticas</h2>
+              <p className="text-muted-foreground text-sm">Análisis en tiempo real de ventas y premios</p>
             </div>
 
             <ReportsCard bets={currentBets} draws={currentDraws} lotteries={currentLotteries} />
@@ -505,13 +507,13 @@ function App() {
             <DrawStatsCard bets={currentBets} draws={currentDraws} lotteries={currentLotteries} />
           </TabsContent>
 
-          <TabsContent value="lotteries" className="space-y-6">
-            <div className="flex items-center justify-between">
+          <TabsContent value="lotteries" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-semibold">Gestión de Loterías</h2>
-                <p className="text-muted-foreground">Crear y administrar loterías disponibles</p>
+                <h2 className="text-xl md:text-2xl font-semibold">Gestión de Loterías</h2>
+                <p className="text-muted-foreground text-sm">Crear y administrar loterías disponibles</p>
               </div>
-              <Button onClick={() => setLotteryDialogOpen(true)}>
+              <Button onClick={() => setLotteryDialogOpen(true)} className="w-full sm:w-auto">
                 <Plus className="mr-2" />
                 Nueva Lotería
               </Button>
@@ -519,7 +521,7 @@ function App() {
 
             <Card>
               <CardContent className="pt-6">
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <div className="flex-1 relative">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -538,7 +540,7 @@ function App() {
                       }))
                     }
                   >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue placeholder="Estado" />
                     </SelectTrigger>
                     <SelectContent>
@@ -639,13 +641,13 @@ function App() {
             )}
           </TabsContent>
 
-          <TabsContent value="bets" className="space-y-6">
-            <div className="flex items-center justify-between">
+          <TabsContent value="bets" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-semibold">Jugadas</h2>
-                <p className="text-muted-foreground">Registrar y ver jugadas de usuarios</p>
+                <h2 className="text-xl md:text-2xl font-semibold">Jugadas</h2>
+                <p className="text-muted-foreground text-sm">Registrar y ver jugadas de usuarios</p>
               </div>
-              <Button onClick={() => setBetDialogOpen(true)}>
+              <Button onClick={() => setBetDialogOpen(true)} className="w-full sm:w-auto">
                 <Plus className="mr-2" />
                 Nueva Jugada
               </Button>
@@ -653,7 +655,7 @@ function App() {
 
             <Card>
               <CardContent className="pt-6">
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <div className="flex-1 relative">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -669,7 +671,7 @@ function App() {
                       setBetFilters((f) => ({ ...f, lotteryId: value === "all" ? undefined : value }))
                     }
                   >
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-full sm:w-[200px]">
                       <SelectValue placeholder="Filtrar por lotería" />
                     </SelectTrigger>
                     <SelectContent>
@@ -707,62 +709,64 @@ function App() {
               </Card>
             ) : (
               <Card>
-                <ScrollArea className="h-[600px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fecha/Hora</TableHead>
-                        <TableHead>Lotería</TableHead>
-                        <TableHead>Animal</TableHead>
-                        <TableHead>Monto</TableHead>
-                        <TableHead>Premio Potencial</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredBets
-                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                        .map((bet) => (
-                          <TableRow key={bet.id}>
-                            <TableCell>
-                              {format(new Date(bet.timestamp), "dd/MM/yyyy HH:mm", { locale: es })}
-                            </TableCell>
-                            <TableCell>{bet.lotteryName}</TableCell>
-                            <TableCell>
-                              {bet.animalNumber} - {bet.animalName}
-                            </TableCell>
-                            <TableCell className="tabular-nums">{formatCurrency(bet.amount)}</TableCell>
-                            <TableCell className="tabular-nums font-medium text-accent">
-                              {formatCurrency(bet.potentialWin)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
+                <ScrollArea className="h-[400px] md:h-[600px]">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="whitespace-nowrap">Fecha/Hora</TableHead>
+                          <TableHead className="whitespace-nowrap">Lotería</TableHead>
+                          <TableHead className="whitespace-nowrap">Animal</TableHead>
+                          <TableHead className="whitespace-nowrap">Monto</TableHead>
+                          <TableHead className="whitespace-nowrap">Premio Potencial</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredBets
+                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                          .map((bet) => (
+                            <TableRow key={bet.id}>
+                              <TableCell className="whitespace-nowrap text-xs md:text-sm">
+                                {format(new Date(bet.timestamp), "dd/MM/yyyy HH:mm", { locale: es })}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-xs md:text-sm">{bet.lotteryName}</TableCell>
+                              <TableCell className="whitespace-nowrap text-xs md:text-sm">
+                                {bet.animalNumber} - {bet.animalName}
+                              </TableCell>
+                              <TableCell className="tabular-nums whitespace-nowrap text-xs md:text-sm">{formatCurrency(bet.amount)}</TableCell>
+                              <TableCell className="tabular-nums font-medium text-accent whitespace-nowrap text-xs md:text-sm">
+                                {formatCurrency(bet.potentialWin)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </ScrollArea>
               </Card>
             )}
           </TabsContent>
 
-          <TabsContent value="winners" className="space-y-6">
-            <div className="flex items-center justify-between">
+          <TabsContent value="winners" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-semibold">Ganadores y Sorteos</h2>
-                <p className="text-muted-foreground">Realizar sorteos y ver ganadores</p>
+                <h2 className="text-xl md:text-2xl font-semibold">Ganadores y Sorteos</h2>
+                <p className="text-muted-foreground text-sm">Realizar sorteos y ver ganadores</p>
               </div>
-              <Button onClick={() => setDrawDialogOpen(true)}>
+              <Button onClick={() => setDrawDialogOpen(true)} className="w-full sm:w-auto">
                 <Trophy className="mr-2" />
                 Realizar Sorteo
               </Button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Sorteos Realizados</CardTitle>
                   <CardDescription>Historial de sorteos y resultados</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <div className="flex-1 relative">
                       <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -778,7 +782,7 @@ function App() {
                         setDrawFilters((f) => ({ ...f, lotteryId: value === "all" ? undefined : value }))
                       }
                     >
-                      <SelectTrigger className="w-[200px]">
+                      <SelectTrigger className="w-full sm:w-[200px]">
                         <SelectValue placeholder="Filtrar por lotería" />
                       </SelectTrigger>
                       <SelectContent>
@@ -797,25 +801,25 @@ function App() {
                       {currentDraws.length === 0 ? "No hay sorteos realizados" : "No se encontraron sorteos"}
                     </p>
                   ) : (
-                    <ScrollArea className="h-[300px]">
+                    <ScrollArea className="h-[250px] md:h-[300px]">
                       <div className="space-y-3">
                         {filteredDraws
                           .sort((a, b) => new Date(b.drawTime).getTime() - new Date(a.drawTime).getTime())
                           .map((draw) => (
                             <div
                               key={draw.id}
-                              className="flex items-center justify-between p-4 border rounded-lg"
+                              className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3"
                             >
-                              <div>
-                                <p className="font-medium">{draw.lotteryName}</p>
-                                <p className="text-sm text-muted-foreground">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{draw.lotteryName}</p>
+                                <p className="text-sm text-muted-foreground truncate">
                                   Ganador: {draw.winningAnimalNumber} - {draw.winningAnimalName}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   {format(new Date(draw.drawTime), "dd/MM/yyyy HH:mm", { locale: es })}
                                 </p>
                               </div>
-                              <div className="text-right">
+                              <div className="text-left sm:text-right shrink-0">
                                 <p className="text-sm text-muted-foreground">
                                   {draw.winnersCount} ganador{draw.winnersCount !== 1 ? "es" : ""}
                                 </p>
@@ -837,7 +841,7 @@ function App() {
                   <CardDescription>Todas las jugadas que han ganado premios</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <div className="flex-1 relative">
                       <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -853,7 +857,7 @@ function App() {
                         setWinnerFilters((f) => ({ ...f, lotteryId: value === "all" ? undefined : value }))
                       }
                     >
-                      <SelectTrigger className="w-[200px]">
+                      <SelectTrigger className="w-full sm:w-[200px]">
                         <SelectValue placeholder="Filtrar por lotería" />
                       </SelectTrigger>
                       <SelectContent>
@@ -872,39 +876,41 @@ function App() {
                       {winners.length === 0 ? "No hay ganadores aún" : "No se encontraron ganadores"}
                     </p>
                   ) : (
-                    <ScrollArea className="h-[300px]">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>Lotería</TableHead>
-                            <TableHead>Animal</TableHead>
-                            <TableHead>Apuesta</TableHead>
-                            <TableHead>Premio</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredWinners
-                            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                            .map((bet) => (
-                              <TableRow key={bet.id}>
-                                <TableCell>
-                                  {format(new Date(bet.timestamp), "dd/MM/yyyy", { locale: es })}
-                                </TableCell>
-                                <TableCell>{bet.lotteryName}</TableCell>
-                                <TableCell>
-                                  {bet.animalNumber} - {bet.animalName}
-                                </TableCell>
-                                <TableCell className="tabular-nums">
-                                  {formatCurrency(bet.amount)}
-                                </TableCell>
-                                <TableCell className="tabular-nums font-semibold text-accent">
-                                  {formatCurrency(bet.potentialWin)}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
+                    <ScrollArea className="h-[250px] md:h-[300px]">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="whitespace-nowrap">Fecha</TableHead>
+                              <TableHead className="whitespace-nowrap">Lotería</TableHead>
+                              <TableHead className="whitespace-nowrap">Animal</TableHead>
+                              <TableHead className="whitespace-nowrap">Apuesta</TableHead>
+                              <TableHead className="whitespace-nowrap">Premio</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredWinners
+                              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                              .map((bet) => (
+                                <TableRow key={bet.id}>
+                                  <TableCell className="whitespace-nowrap text-xs md:text-sm">
+                                    {format(new Date(bet.timestamp), "dd/MM/yyyy", { locale: es })}
+                                  </TableCell>
+                                  <TableCell className="whitespace-nowrap text-xs md:text-sm">{bet.lotteryName}</TableCell>
+                                  <TableCell className="whitespace-nowrap text-xs md:text-sm">
+                                    {bet.animalNumber} - {bet.animalName}
+                                  </TableCell>
+                                  <TableCell className="tabular-nums whitespace-nowrap text-xs md:text-sm">
+                                    {formatCurrency(bet.amount)}
+                                  </TableCell>
+                                  <TableCell className="tabular-nums font-semibold text-accent whitespace-nowrap text-xs md:text-sm">
+                                    {formatCurrency(bet.potentialWin)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </ScrollArea>
                   )}
                 </CardContent>
@@ -912,13 +918,13 @@ function App() {
             </div>
           </TabsContent>
 
-          <TabsContent value="history" className="space-y-6">
+          <TabsContent value="history" className="space-y-4 md:space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold">Historial de Transacciones</h2>
-              <p className="text-muted-foreground">Transferencias y retiros realizados</p>
+              <h2 className="text-xl md:text-2xl font-semibold">Historial de Transacciones</h2>
+              <p className="text-muted-foreground text-sm">Transferencias y retiros realizados</p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle>Transferencias Entre Potes</CardTitle>
@@ -941,18 +947,18 @@ function App() {
                         : "No se encontraron transferencias"}
                     </p>
                   ) : (
-                    <ScrollArea className="h-[400px]">
+                    <ScrollArea className="h-[350px] md:h-[400px]">
                       <div className="space-y-3">
                         {filteredTransfers
                           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                           .map((transfer) => (
                             <div key={transfer.id} className="p-3 border rounded-lg space-y-1">
-                              <div className="flex justify-between items-start">
-                                <div className="text-sm">
-                                  <p className="font-medium">De: {transfer.fromPot}</p>
-                                  <p className="text-muted-foreground">Para: {transfer.toPot}</p>
+                              <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                                <div className="text-sm flex-1 min-w-0">
+                                  <p className="font-medium truncate">De: {transfer.fromPot}</p>
+                                  <p className="text-muted-foreground truncate">Para: {transfer.toPot}</p>
                                 </div>
-                                <p className="font-semibold tabular-nums">
+                                <p className="font-semibold tabular-nums shrink-0">
                                   {formatCurrency(transfer.amount)}
                                 </p>
                               </div>
@@ -991,15 +997,15 @@ function App() {
                         : "No se encontraron retiros"}
                     </p>
                   ) : (
-                    <ScrollArea className="h-[400px]">
+                    <ScrollArea className="h-[350px] md:h-[400px]">
                       <div className="space-y-3">
                         {filteredWithdrawals
                           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                           .map((withdrawal) => (
                             <div key={withdrawal.id} className="p-3 border rounded-lg space-y-1">
-                              <div className="flex justify-between items-start">
-                                <p className="text-sm font-medium">{withdrawal.fromPot}</p>
-                                <p className="font-semibold text-accent tabular-nums">
+                              <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                                <p className="text-sm font-medium truncate flex-1">{withdrawal.fromPot}</p>
+                                <p className="font-semibold text-accent tabular-nums shrink-0">
                                   {formatCurrency(withdrawal.amount)}
                                 </p>
                               </div>
@@ -1018,13 +1024,13 @@ function App() {
             </div>
           </TabsContent>
 
-          <TabsContent value="users" className="space-y-6">
-            <div className="flex items-center justify-between">
+          <TabsContent value="users" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-semibold">Gestión de Usuarios</h2>
-                <p className="text-muted-foreground">Administrar usuarios del sistema</p>
+                <h2 className="text-xl md:text-2xl font-semibold">Gestión de Usuarios</h2>
+                <p className="text-muted-foreground text-sm">Administrar usuarios del sistema</p>
               </div>
-              <Button onClick={() => setUserDialogOpen(true)}>
+              <Button onClick={() => setUserDialogOpen(true)} className="w-full sm:w-auto">
                 <Plus className="mr-2" />
                 Nuevo Usuario
               </Button>
@@ -1032,8 +1038,8 @@ function App() {
 
             <Card>
               <CardContent className="pt-6">
-                <div className="flex gap-4">
-                  <div className="flex-1 relative">
+                <div className="flex flex-col gap-3">
+                  <div className="relative">
                     <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="Buscar por nombre o email..."
@@ -1042,118 +1048,122 @@ function App() {
                       className="pl-10"
                     />
                   </div>
-                  <Select
-                    value={userFilters.isActive === undefined ? "all" : userFilters.isActive.toString()}
-                    onValueChange={(value) =>
-                      setUserFilters((f) => ({
-                        ...f,
-                        isActive: value === "all" ? undefined : value === "true",
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="true">Activos</SelectItem>
-                      <SelectItem value="false">Inactivos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={userFilters.roleId || "all"}
-                    onValueChange={(value) =>
-                      setUserFilters((f) => ({ ...f, roleId: value === "all" ? undefined : value }))
-                    }
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Rol" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los roles</SelectItem>
-                      {currentRoles.map((role) => (
-                        <SelectItem key={role.id} value={role.id}>
-                          {role.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Select
+                      value={userFilters.isActive === undefined ? "all" : userFilters.isActive.toString()}
+                      onValueChange={(value) =>
+                        setUserFilters((f) => ({
+                          ...f,
+                          isActive: value === "all" ? undefined : value === "true",
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="true">Activos</SelectItem>
+                        <SelectItem value="false">Inactivos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={userFilters.roleId || "all"}
+                      onValueChange={(value) =>
+                        setUserFilters((f) => ({ ...f, roleId: value === "all" ? undefined : value }))
+                      }
+                    >
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Rol" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los roles</SelectItem>
+                        {currentRoles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <ScrollArea className="h-[600px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Roles</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Fecha Creación</TableHead>
-                      <TableHead>Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((user) => {
-                      const userRoles = currentRoles.filter((r) => user.roleIds.includes(r.id))
-                      return (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.name}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {userRoles.map((role) => (
-                                <Badge key={role.id} variant="secondary">
-                                  {role.name}
-                                </Badge>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={user.isActive ? "default" : "secondary"}>
-                              {user.isActive ? "Activo" : "Inactivo"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(user.createdAt), "dd/MM/yyyy", { locale: es })}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditUser(user)}
-                              >
-                                <Pencil />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteUser(user.id)}
-                                disabled={user.id === currentUserId}
-                              >
-                                <Trash />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
+              <ScrollArea className="h-[400px] md:h-[600px]">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">Nombre</TableHead>
+                        <TableHead className="whitespace-nowrap">Email</TableHead>
+                        <TableHead className="whitespace-nowrap">Roles</TableHead>
+                        <TableHead className="whitespace-nowrap">Estado</TableHead>
+                        <TableHead className="whitespace-nowrap">Fecha Creación</TableHead>
+                        <TableHead className="whitespace-nowrap">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.map((user) => {
+                        const userRoles = currentRoles.filter((r) => user.roleIds.includes(r.id))
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium whitespace-nowrap text-xs md:text-sm">{user.name}</TableCell>
+                            <TableCell className="whitespace-nowrap text-xs md:text-sm">{user.email}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {userRoles.map((role) => (
+                                  <Badge key={role.id} variant="secondary" className="text-xs">
+                                    {role.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <Badge variant={user.isActive ? "default" : "secondary"} className="text-xs">
+                                {user.isActive ? "Activo" : "Inactivo"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-xs md:text-sm">
+                              {format(new Date(user.createdAt), "dd/MM/yyyy", { locale: es })}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEditUser(user)}
+                                >
+                                  <Pencil />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  disabled={user.id === currentUserId}
+                                >
+                                  <Trash />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </ScrollArea>
             </Card>
           </TabsContent>
 
-          <TabsContent value="roles" className="space-y-6">
-            <div className="flex items-center justify-between">
+          <TabsContent value="roles" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-semibold">Gestión de Roles</h2>
-                <p className="text-muted-foreground">Definir roles y permisos de acceso</p>
+                <h2 className="text-xl md:text-2xl font-semibold">Gestión de Roles</h2>
+                <p className="text-muted-foreground text-sm">Definir roles y permisos de acceso</p>
               </div>
-              <Button onClick={() => setRoleDialogOpen(true)}>
+              <Button onClick={() => setRoleDialogOpen(true)} className="w-full sm:w-auto">
                 <Plus className="mr-2" />
                 Nuevo Rol
               </Button>
@@ -1233,13 +1243,13 @@ function App() {
             </div>
           </TabsContent>
 
-          <TabsContent value="api-keys" className="space-y-6">
-            <div className="flex items-center justify-between">
+          <TabsContent value="api-keys" className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-semibold">Gestión de API Keys</h2>
-                <p className="text-muted-foreground">Conectar sistemas de ventas externos</p>
+                <h2 className="text-xl md:text-2xl font-semibold">Gestión de API Keys</h2>
+                <p className="text-muted-foreground text-sm">Conectar sistemas de ventas externos</p>
               </div>
-              <Button onClick={() => setApiKeyDialogOpen(true)}>
+              <Button onClick={() => setApiKeyDialogOpen(true)} className="w-full sm:w-auto">
                 <Plus className="mr-2" />
                 Nueva API Key
               </Button>

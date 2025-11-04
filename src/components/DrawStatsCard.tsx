@@ -118,30 +118,30 @@ export function DrawStatsCard({ bets, draws, lotteries }: DrawStatsCardProps) {
 
         {selectedDrawId && selectedDraw && (
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid gap-3 sm:grid-cols-3">
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-2xl font-bold tabular-nums">{formatCurrency(totalAmount)}</div>
-                  <p className="text-sm text-muted-foreground">Total Jugado</p>
+                  <div className="text-xl md:text-2xl font-bold tabular-nums">{formatCurrency(totalAmount)}</div>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total Jugado</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-2xl font-bold tabular-nums">{totalBetCount}</div>
-                  <p className="text-sm text-muted-foreground">Total Jugadas</p>
+                  <div className="text-xl md:text-2xl font-bold tabular-nums">{totalBetCount}</div>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total Jugadas</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-2xl font-bold tabular-nums">{animalStats.length}</div>
-                  <p className="text-sm text-muted-foreground">Animalitos Jugados</p>
+                  <div className="text-xl md:text-2xl font-bold tabular-nums">{animalStats.length}</div>
+                  <p className="text-xs md:text-sm text-muted-foreground">Animalitos Jugados</p>
                 </CardContent>
               </Card>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium">Animalito Ganador</h3>
+                <h3 className="text-xs md:text-sm font-medium">Animalito Ganador</h3>
                 <Badge variant="default" className="text-xs">
                   {selectedDraw.winningAnimalNumber} - {selectedDraw.winningAnimalName}
                 </Badge>
@@ -149,54 +149,55 @@ export function DrawStatsCard({ bets, draws, lotteries }: DrawStatsCardProps) {
             </div>
 
             {animalStats.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground py-8 text-sm">
                 No hay jugadas registradas para este sorteo
               </p>
             ) : (
-              <ScrollArea className="h-[500px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[60px]">Posición</TableHead>
-                      <TableHead>Animalito</TableHead>
-                      <TableHead className="text-right">Jugadas</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="text-right">Porcentaje</TableHead>
-                      <TableHead className="w-[200px]">Distribución</TableHead>
-                    </TableRow>
-                  </TableHeader>
+              <ScrollArea className="h-[400px] md:h-[500px]">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px] md:w-[60px] whitespace-nowrap">Pos.</TableHead>
+                        <TableHead className="whitespace-nowrap">Animalito</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Jugadas</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Total</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">%</TableHead>
+                        <TableHead className="w-[120px] md:w-[200px] whitespace-nowrap">Distribución</TableHead>
+                      </TableRow>
+                    </TableHeader>
                   <TableBody>
                     {animalStats.map((stat, index) => {
                       const isWinner = stat.animalNumber === selectedDraw.winningAnimalNumber
                       return (
                         <TableRow key={stat.animalNumber} className={isWinner ? "bg-accent/20" : ""}>
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium text-xs md:text-sm">
                             {index + 1}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs md:text-sm">
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-semibold">{stat.animalNumber}</span>
-                              <span>{stat.animalName}</span>
+                              <span className="truncate">{stat.animalName}</span>
                               {isWinner && (
-                                <Badge variant="default" className="text-xs">
+                                <Badge variant="default" className="text-xs shrink-0">
                                   Ganador
                                 </Badge>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-right tabular-nums text-xs md:text-sm">
                             {stat.betCount}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">
+                          <TableCell className="text-right tabular-nums font-medium text-xs md:text-sm">
                             {formatCurrency(stat.totalAmount)}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums font-semibold">
+                          <TableCell className="text-right tabular-nums font-semibold text-xs md:text-sm">
                             {stat.percentage.toFixed(2)}%
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <Progress value={stat.percentage} className="h-2" />
-                              <span className="text-xs text-muted-foreground tabular-nums min-w-[45px]">
+                              <Progress value={stat.percentage} className="h-2 flex-1" />
+                              <span className="text-xs text-muted-foreground tabular-nums min-w-[40px] md:min-w-[45px]">
                                 {stat.percentage.toFixed(1)}%
                               </span>
                             </div>
@@ -206,6 +207,7 @@ export function DrawStatsCard({ bets, draws, lotteries }: DrawStatsCardProps) {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </ScrollArea>
             )}
           </div>
