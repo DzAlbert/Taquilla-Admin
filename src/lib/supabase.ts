@@ -1,12 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+// In development provide a harmless local fallback so the app doesn't
+// crash if the environment variables are not set. Production should
+// always set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:9999'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'public-anon-key'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// Accurate check whether the project is configured with real keys
 export const isSupabaseConfigured = (): boolean => {
-  return !!(supabaseUrl && supabaseAnonKey)
+  return !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 }
 
 export type Database = {

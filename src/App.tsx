@@ -23,6 +23,8 @@ import { ApiKeyDialog } from "@/components/ApiKeyDialog"
 import { ReportsCard } from "@/components/ReportsCard"
 import { DrawStatsCard } from "@/components/DrawStatsCard"
 import { useSupabaseAuth } from "@/hooks/use-supabase-auth"
+import { useSupabaseRoles } from "@/hooks/use-supabase-roles"
+import { useSupabaseUsers } from "@/hooks/use-supabase-users"
 import { Plus, Ticket, Trophy, Vault, ListBullets, Calendar, Pencil, Trash, Users, ShieldCheck, SignOut, MagnifyingGlass, Funnel, ChartLine, Key, Copy, Eye, EyeSlash } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import { Toaster } from "@/components/ui/sonner"
@@ -41,10 +43,26 @@ function App() {
   const [transfers, setTransfers] = useKV<Transfer[]>("transfers", [])
   const [withdrawals, setWithdrawals] = useKV<Withdrawal[]>("withdrawals", [])
   const [users, setUsers] = useKV<User[]>("users", [])
-  const [roles, setRoles] = useKV<Role[]>("roles", [])
   const [apiKeys, setApiKeys] = useKV<ApiKey[]>("apiKeys", [])
 
   const { currentUser, currentUserId, isLoading, login, logout, hasPermission } = useSupabaseAuth()
+  const { 
+    roles, 
+    isLoading: rolesLoading, 
+    createRole, 
+    updateRole, 
+    deleteRole,
+    loadRoles 
+  } = useSupabaseRoles()
+  const {
+    users: supabaseUsers,
+    isLoading: usersLoading,
+    createUser,
+    updateUser, 
+    deleteUser,
+    toggleUserStatus,
+    loadUsers
+  } = useSupabaseUsers()
 
   const [lotteryDialogOpen, setLotteryDialogOpen] = useState(false)
   const [editingLottery, setEditingLottery] = useState<Lottery | undefined>()
@@ -77,30 +95,7 @@ function App() {
   const [apiKeySearch, setApiKeySearch] = useState("")
 
   useEffect(() => {
-    const currentRoles = roles || []
-    const currentUsers = users || []
-
-    if (currentRoles.length === 0) {
-      const defaultRoles: Role[] = [
-        {
-          id: "admin",
-          name: "Administrador",
-          description: "Acceso completo al sistema",
-          permissions: ["dashboard", "reports", "lotteries", "bets", "winners", "history", "users", "roles", "api-keys"],
-          createdAt: new Date().toISOString(),
-          isSystem: true,
-        },
-        {
-          id: "vendor",
-          name: "Vendedor",
-          description: "Puede registrar jugadas y ver loterías",
-          permissions: ["lotteries", "bets", "reports"],
-          createdAt: new Date().toISOString(),
-          isSystem: true,
-        },
-      ]
-      setRoles(defaultRoles)
-    }
+    const currentUsers = supabaseUsers || []
 
     if (currentUsers.length === 0) {
       const adminUser: User = {
@@ -195,27 +190,42 @@ function App() {
     setTransferDialogOpen(true)
   }
 
-  const handleSaveRole = (role: Role) => {
-    setRoles((current) => {
-      const currentList = current || []
-      const exists = currentList.find((r) => r.id === role.id)
-      if (exists) {
-        return currentList.map((r) => (r.id === role.id ? role : r))
+  const handleSaveRole = async (roleData: Omit<Role, 'id' | 'createdAt'>): Promise<boolean> => {
+    try {
+      let success = false
+      
+      if (editingRole) {
+        // Actualizar rol existente
+        success = await updateRole(editingRole.id, roleData)
+      } else {
+        // Crear nuevo rol
+        success = await createRole(roleData)
       }
-      return [...currentList, role]
-    })
-    setEditingRole(undefined)
+      
+      if (success) {
+        setEditingRole(undefined)
+      }
+      
+      return success
+    } catch (error) {
+      console.error('Error in handleSaveRole:', error)
+      return false
+    }
   }
 
-  const handleDeleteRole = (id: string) => {
-    const role = (roles || []).find((r) => r.id === id)
+  const handleDeleteRole = async (id: string) => {
+    const role = roles.find((r) => r.id === id)
     if (role?.isSystem) {
       toast.error("No se pueden eliminar roles del sistema")
       return
     }
+    
     if (confirm("¿Está seguro de eliminar este rol?")) {
-      setRoles((current) => (current || []).filter((r) => r.id !== id))
-      toast.success("Rol eliminado")
+      const success = await deleteRole(id)
+      if (!success) {
+        // El error ya se maneja en el hook
+        return
+      }
     }
   }
 
@@ -224,26 +234,36 @@ function App() {
     setRoleDialogOpen(true)
   }
 
-  const handleSaveUser = (user: User) => {
-    setUsers((current) => {
-      const currentList = current || []
-      const exists = currentList.find((u) => u.id === user.id)
-      if (exists) {
-        return currentList.map((u) => (u.id === user.id ? user : u))
+  const handleSaveUser = async (userData: Omit<User, 'id' | 'createdAt'>): Promise<boolean> => {
+    try {
+      if (editingUser) {
+        // Actualizar usuario existente
+        await updateUser(editingUser.id, userData)
+      } else {
+        // Crear nuevo usuario
+        await createUser(userData)
       }
-      return [...currentList, user]
-    })
-    setEditingUser(undefined)
+      setEditingUser(undefined)
+      return true
+    } catch (error) {
+      console.error('Error saving user:', error)
+      return false
+    }
   }
 
-  const handleDeleteUser = (id: string) => {
+  const handleDeleteUser = async (id: string) => {
     if (id === currentUserId) {
       toast.error("No puede eliminar su propio usuario")
       return
     }
     if (confirm("¿Está seguro de eliminar este usuario?")) {
-      setUsers((current) => (current || []).filter((u) => u.id !== id))
-      toast.success("Usuario eliminado")
+      try {
+        await deleteUser(id)
+        toast.success("Usuario eliminado")
+      } catch (error) {
+        console.error('Error deleting user:', error)
+        toast.error("Error al eliminar usuario")
+      }
     }
   }
 
@@ -306,7 +326,7 @@ function App() {
   const currentDraws = draws || []
   const currentTransfers = transfers || []
   const currentWithdrawals = withdrawals || []
-  const currentUsers = users || []
+  const currentUsers = supabaseUsers || []
   const currentRoles = roles || []
   const currentApiKeys = apiKeys || []
 
@@ -353,7 +373,9 @@ function App() {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center">
-            <p className="text-lg">Cargando...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-foreground">Cargando aplicación...</p>
+            <p className="text-sm text-muted-foreground">Conectando con Supabase...</p>
           </div>
         </div>
       )
@@ -1192,12 +1214,24 @@ function App() {
             </Card>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredRoles.map((role) => {
-                const usersWithRole = currentUsers.filter((u) => u.roleIds.includes(role.id))
-                return (
-                  <Card key={role.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
+              {rolesLoading ? (
+                <div className="col-span-full flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-muted-foreground mt-2">Cargando roles...</p>
+                  </div>
+                </div>
+              ) : filteredRoles.length === 0 ? (
+                <div className="col-span-full text-center py-8">
+                  <p className="text-muted-foreground">No hay roles que mostrar</p>
+                </div>
+              ) : (
+                filteredRoles.map((role) => {
+                  const usersWithRole = currentUsers.filter((u) => u.roleIds.includes(role.id))
+                  return (
+                    <Card key={role.id}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <CardTitle>{role.name}</CardTitle>
@@ -1246,8 +1280,9 @@ function App() {
                       </div>
                     </CardContent>
                   </Card>
-                )
-              })}
+                  )
+                })
+              )}
             </div>
           </TabsContent>
 

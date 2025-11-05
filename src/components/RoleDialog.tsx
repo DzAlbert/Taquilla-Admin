@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,7 @@ interface RoleDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   role?: Role
-  onSave: (role: Role) => void
+  onSave: (role: Omit<Role, 'id' | 'createdAt'>) => Promise<boolean>
 }
 
 const AVAILABLE_MODULES: { value: ModulePermission; label: string; description: string }[] = [
@@ -26,12 +26,22 @@ const AVAILABLE_MODULES: { value: ModulePermission; label: string; description: 
 ]
 
 export function RoleDialog({ open, onOpenChange, role, onSave }: RoleDialogProps) {
-  const [name, setName] = useState(role?.name || "")
-  const [description, setDescription] = useState(role?.description || "")
-  const [permissions, setPermissions] = useState<ModulePermission[]>(role?.permissions || [])
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [permissions, setPermissions] = useState<ModulePermission[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSave = () => {
-    if (!name) {
+  // Resetear el formulario cuando cambie el rol o se abra el diálogo
+  useEffect(() => {
+    if (open) {
+      setName(role?.name || "")
+      setDescription(role?.description || "")
+      setPermissions(role?.permissions || [])
+    }
+  }, [open, role])
+
+  const handleSave = async () => {
+    if (!name.trim()) {
       toast.error("Por favor ingrese el nombre del rol")
       return
     }
@@ -41,18 +51,31 @@ export function RoleDialog({ open, onOpenChange, role, onSave }: RoleDialogProps
       return
     }
 
-    const roleData: Role = {
-      id: role?.id || Date.now().toString(),
-      name,
-      description,
-      permissions,
-      createdAt: role?.createdAt || new Date().toISOString(),
-      isSystem: role?.isSystem || false,
-    }
+    setIsLoading(true)
 
-    onSave(roleData)
-    onOpenChange(false)
-    toast.success(role ? "Rol actualizado" : "Rol creado")
+    try {
+      const roleData = {
+        name: name.trim(),
+        description: description.trim(),
+        permissions,
+        isSystem: role?.isSystem || false,
+      }
+
+      const success = await onSave(roleData)
+      
+      if (success) {
+        onOpenChange(false)
+        // Resetear formulario
+        setName("")
+        setDescription("")
+        setPermissions([])
+      }
+    } catch (error) {
+      console.error('Error saving role:', error)
+      toast.error('Error al guardar el rol')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const togglePermission = (permission: ModulePermission) => {
@@ -125,11 +148,11 @@ export function RoleDialog({ open, onOpenChange, role, onSave }: RoleDialogProps
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={role?.isSystem}>
-            Guardar
+          <Button onClick={handleSave} disabled={role?.isSystem || isLoading}>
+            {isLoading ? "Guardando..." : "Guardar"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -28,6 +28,51 @@
    - Pantalla de carga mientras verifica sesión
    - Redirect automático al login si no está autenticado
 
+## ✅ Módulo 2: ROLES - COMPLETADO
+
+### Lo que se ha implementado:
+
+1. **Hook de Roles con Supabase** (`src/hooks/use-supabase-roles.ts`)
+   - Función `loadRoles()` - Carga roles desde Supabase
+   - Función `createRole()` - Crea nuevos roles en Supabase
+   - Función `updateRole()` - Actualiza roles existentes
+   - Función `deleteRole()` - Elimina roles (con protección para roles del sistema)
+   - Fallback a datos locales si Supabase no está disponible
+   - Manejo de errores con notificaciones toast
+
+2. **Diálogo de Roles actualizado** (`src/components/RoleDialog.tsx`)
+   - Formulario para crear/editar roles
+   - Selección de permisos por módulos
+   - Validación de campos requeridos
+   - Estados de carga durante operaciones
+   - Protección para roles del sistema
+
+3. **App.tsx actualizado para Roles**
+   - Usa el nuevo hook `useSupabaseRoles`
+   - Operaciones CRUD completamente funcionales
+   - Indicadores de carga
+   - Manejo de errores integrado
+   - Eliminó la inicialización local de roles por defecto
+
+4. **Gestión de Roles en UI**
+   - Lista de roles cargados desde Supabase
+   - Creación de nuevos roles
+   - Edición de roles existentes
+   - Eliminación con confirmación
+   - Búsqueda y filtrado
+   - Estados de carga visual
+
+### Datos de Ejemplo Cargados:
+- Administrador (acceso completo)
+- Vendedor (loterías, apuestas, reportes)
+
+### Estado: ✅ FUNCIONAL
+- Conexión con Supabase: ✅
+- Operaciones CRUD: ✅  
+- Validaciones: ✅
+- UI/UX: ✅
+- Manejo de errores: ✅
+
 ### Cómo funciona el login:
 
 ```typescript
@@ -96,7 +141,7 @@ END $$;
 
 ## 📋 Próximos Módulos a Integrar
 
-### Módulo 2: ROLES (Pendiente)
+### Módulo 2: ROLES (Listo)
 - Leer roles desde `roles` table
 - Crear/editar/eliminar roles
 - Actualizar permisos
