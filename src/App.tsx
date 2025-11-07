@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Bet, DrawResult, Lottery, Transfer, Withdrawal, User, Role, ModulePermission, ApiKey } from "@/lib/types"
-import { INITIAL_POTS, deductFromPot, distributeBetToPots, formatCurrency, transferBetweenPots } from "@/lib/pot-utils"
+import { INITIAL_POTS, formatCurrency } from "@/lib/pot-utils"
 import { filterLotteries, filterBets, filterUsers, filterRoles } from "@/lib/filter-utils"
 import { PotCard } from "@/components/PotCard"
 import { LotteryDialog } from "@/components/LotteryDialog"
@@ -29,6 +29,7 @@ import { useSupabaseUsers } from "@/hooks/use-supabase-users"
 import { useSupabaseLotteries } from "@/hooks/use-supabase-lotteries"
 import { useSupabaseDraws } from "@/hooks/use-supabase-draws"
 import { useSupabaseBets } from "@/hooks/use-supabase-bets"
+import { useSupabasePots } from "@/hooks/use-supabase-pots"
 import { Plus, Ticket, Trophy, Vault, ListBullets, Calendar, Pencil, Trash, Users, ShieldCheck, SignOut, MagnifyingGlass, Funnel, ChartLine, Key, Copy, Eye, EyeSlash } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import { Toaster } from "@/components/ui/sonner"
@@ -41,9 +42,16 @@ import { Label } from "@/components/ui/label"
 
 function App() {
   const [draws, setDraws] = useKV<DrawResult[]>("draws", [])
-  const [pots, setPots] = useKV<typeof INITIAL_POTS>("pots", INITIAL_POTS)
-  const [transfers, setTransfers] = useKV<Transfer[]>("transfers", [])
-  const [withdrawals, setWithdrawals] = useKV<Withdrawal[]>("withdrawals", [])
+  
+  const { 
+    pots, 
+    transfers, 
+    withdrawals, 
+    distributeBetToPots, 
+    createTransfer, 
+    createWithdrawal,
+    deductFromPot
+  } = useSupabasePots()
   const [users, setUsers] = useKV<User[]>("users", [])
   const [apiKeys, setApiKeys] = useKV<ApiKey[]>("apiKeys", [])
 
@@ -191,37 +199,25 @@ function App() {
     console.log('📊 Resultado de createBet:', success)
 
     if (success) {
-      // Actualizar los potes solo si se guardó exitosamente
-      setPots((current) => distributeBetToPots(bet.amount, current || INITIAL_POTS))
+      // Distribuir a los potes usando el hook
+      await distributeBetToPots(bet.amount)
       console.log('✅ Potes actualizados')
     }
   }
 
-  const handleTransfer = (fromIndex: number, toIndex: number, amount: number) => {
-    setPots((current) => transferBetweenPots(fromIndex, toIndex, amount, current || INITIAL_POTS))
-
+  const handleTransfer = async (fromIndex: number, toIndex: number, amount: number) => {
     const currentPots = pots || INITIAL_POTS
-    const transfer: Transfer = {
-      id: Date.now().toString(),
-      fromPot: currentPots[fromIndex].name,
-      toPot: currentPots[toIndex].name,
-      amount,
-      timestamp: new Date().toISOString(),
-    }
-    setTransfers((current) => [...(current || []), transfer])
+    const fromPotName = currentPots[fromIndex].name
+    const toPotName = currentPots[toIndex].name
+    
+    await createTransfer(fromPotName, toPotName, amount)
   }
 
-  const handleWithdraw = (amount: number) => {
-    setPots((current) => deductFromPot(2, amount, current || INITIAL_POTS))
-
+  const handleWithdraw = async (amount: number) => {
     const currentPots = pots || INITIAL_POTS
-    const withdrawal: Withdrawal = {
-      id: Date.now().toString(),
-      amount,
-      timestamp: new Date().toISOString(),
-      fromPot: currentPots[2].name,
-    }
-    setWithdrawals((current) => [...(current || []), withdrawal])
+    const fromPotName = currentPots[2].name // Pote de Ganancias
+    
+    await createWithdrawal(fromPotName, amount)
   }
 
   const handleDraw = async (result: DrawResult, winners: Bet[]) => {
@@ -235,7 +231,7 @@ function App() {
     }
 
     if (result.totalPayout > 0) {
-      setPots((current) => deductFromPot(0, result.totalPayout, current || INITIAL_POTS))
+      await deductFromPot("Pote de Premios", result.totalPayout)
     }
   }
 

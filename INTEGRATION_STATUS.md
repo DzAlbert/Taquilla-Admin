@@ -414,7 +414,7 @@ created_at ↔ timestamp
 
 ### 🔥 MÓDULOS PENDIENTES DE INTEGRAR
 
-### Módulo 7: SORTEOS/DRAWS (Pendiente)
+### Módulo 7: SORTEOS/DRAWS (Listo)
 - Realizar sorteos
 - Marcar ganadores en la tabla `bets`
 - Registrar resultados en `draws`
