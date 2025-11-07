@@ -442,15 +442,19 @@ created_at ↔ timestamp
 - Realizar transferencias
 - Registrar en `transfers` table
 
-### Módulo 9: RETIROS (Pendiente)
+### Módulo 9: RETIROS (Listo)
 - Registrar retiros en `withdrawals` table
 - Actualizar balance de potes
 - Historial de retiros
 
-### Módulo 10: API KEYS (Pendiente)
-- Gestionar API keys para acceso externo
-- Generar claves seguras
-- Verificar permisos de API keys
+### Módulo 10: API KEYS (✅ Listo)
+- ✅ Gestionar API keys para acceso externo con Supabase + localStorage
+- ✅ Generar claves seguras con hash SHA-256
+- ✅ Verificar permisos de API keys granulares
+- ✅ RLS políticas implementadas
+- ✅ Hook use-supabase-apikeys creado
+- ✅ Testing automatizado completo
+- ✅ Estadísticas y métricas en tiempo real
 
 ### Módulo 11: REPORTES (Pendiente)
 - Usar las vistas: `lottery_statistics`, `pots_summary`

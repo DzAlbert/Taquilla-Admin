@@ -31,6 +31,7 @@ import { useSupabaseDraws } from "@/hooks/use-supabase-draws"
 import { useSupabaseBets } from "@/hooks/use-supabase-bets"
 import { useSupabasePots } from "@/hooks/use-supabase-pots"
 import { useSupabaseWithdrawals } from "@/hooks/use-supabase-withdrawals"
+import { useSupabaseApiKeys } from "@/hooks/use-supabase-apikeys"
 import { Plus, Ticket, Trophy, Vault, ListBullets, Calendar, Pencil, Trash, Users, ShieldCheck, SignOut, MagnifyingGlass, Funnel, ChartLine, Key, Copy, Eye, EyeSlash } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import { Toaster } from "@/components/ui/sonner"
@@ -61,8 +62,21 @@ function App() {
     withdrawalStats,
     testConnection: testWithdrawalsConnection
   } = useSupabaseWithdrawals()
+  
+  // Hook específico para API Keys (Módulo 10)
+  const {
+    apiKeys: supabaseApiKeys,
+    isLoading: apiKeysLoading,
+    createApiKey: createSupabaseApiKey,
+    updateApiKey: updateSupabaseApiKey,
+    deleteApiKey: deleteSupabaseApiKey,
+    stats: apiKeysStats,
+    testConnection: testApiKeysConnection
+  } = useSupabaseApiKeys()
+  
   const [users, setUsers] = useKV<User[]>("users", [])
-  const [apiKeys, setApiKeys] = useKV<ApiKey[]>("apiKeys", [])
+  // Mantener localStorage como fallback para API Keys
+  const [localApiKeys, setLocalApiKeys] = useKV<ApiKey[]>("apiKeys", [])
 
   const { currentUser, currentUserId, isLoading, login, logout, hasPermission } = useSupabaseAuth()
   const { 
@@ -341,22 +355,82 @@ function App() {
     }
   }
 
-  const handleSaveApiKey = (apiKey: ApiKey) => {
-    setApiKeys((current) => {
-      const currentList = current || []
-      const exists = currentList.find((a) => a.id === apiKey.id)
-      if (exists) {
-        return currentList.map((a) => (a.id === apiKey.id ? apiKey : a))
+  const handleSaveApiKey = async (apiKey: ApiKey) => {
+    try {
+      if (apiKey.id && supabaseApiKeys.find(k => k.id === apiKey.id)) {
+        // Actualizar API Key existente
+        const success = await updateSupabaseApiKey(apiKey.id, {
+          name: apiKey.name,
+          description: apiKey.description,
+          isActive: apiKey.isActive,
+          permissions: apiKey.permissions
+        })
+        
+        if (success) {
+          toast.success("API Key actualizada exitosamente")
+        } else {
+          throw new Error("Error actualizando API Key")
+        }
+      } else {
+        // Crear nueva API Key
+        const { key: newKey, success } = await createSupabaseApiKey({
+          name: apiKey.name,
+          description: apiKey.description,
+          isActive: apiKey.isActive,
+          permissions: apiKey.permissions,
+          createdBy: currentUserId
+        })
+        
+        if (success && newKey) {
+          toast.success("API Key creada exitosamente")
+          
+          // Mostrar la key generada
+          setTimeout(() => {
+            toast.info(`Nueva API Key: ${newKey}`, {
+              duration: 10000,
+              description: "Copia esta key ahora, no podrás verla de nuevo"
+            })
+          }, 500)
+        } else {
+          throw new Error("Error creando API Key")
+        }
       }
-      return [...currentList, apiKey]
-    })
-    setEditingApiKey(undefined)
+      
+      setEditingApiKey(undefined)
+    } catch (error) {
+      console.error('Error guardando API Key:', error)
+      
+      // Fallback a localStorage
+      setLocalApiKeys((current) => {
+        const currentList = current || []
+        const exists = currentList.find((a) => a.id === apiKey.id)
+        if (exists) {
+          return currentList.map((a) => (a.id === apiKey.id ? apiKey : a))
+        }
+        return [...currentList, apiKey]
+      })
+      setEditingApiKey(undefined)
+      toast.success("API Key guardada localmente")
+    }
   }
 
-  const handleDeleteApiKey = (id: string) => {
+  const handleDeleteApiKey = async (id: string) => {
     if (confirm("¿Está seguro de eliminar esta API Key? Los sistemas externos no podrán conectarse.")) {
-      setApiKeys((current) => (current || []).filter((a) => a.id !== id))
-      toast.success("API Key eliminada")
+      try {
+        const success = await deleteSupabaseApiKey(id)
+        
+        if (success) {
+          toast.success("API Key eliminada exitosamente")
+        } else {
+          throw new Error("Error eliminando API Key")
+        }
+      } catch (error) {
+        console.error('Error eliminando API Key:', error)
+        
+        // Fallback a localStorage
+        setLocalApiKeys((current) => (current || []).filter((a) => a.id !== id))
+        toast.success("API Key eliminada localmente")
+      }
     }
   }
 
@@ -390,7 +464,8 @@ function App() {
   const currentWithdrawals = moduleWithdrawals || []
   const currentUsers = supabaseUsers || []
   const currentRoles = roles || []
-  const currentApiKeys = apiKeys || []
+  // Priorizar API Keys de Supabase, fallback a localStorage
+  const currentApiKeys = supabaseApiKeys.length > 0 ? supabaseApiKeys : (localApiKeys || [])
 
   const winners = currentBets.filter((b) => b.isWinner)
   const activeBets = currentBets.filter((b) => !b.isWinner)

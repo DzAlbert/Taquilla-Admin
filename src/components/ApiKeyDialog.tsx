@@ -66,7 +66,7 @@ export function ApiKeyDialog({ open, onOpenChange, apiKey, currentUserId, onSave
     }
 
     const newApiKey: ApiKey = {
-      id: apiKey?.id || Date.now().toString(),
+      id: apiKey?.id || crypto.randomUUID(),
       name: name.trim(),
       key: apiKey?.key || generateApiKey(),
       description: description.trim(),
@@ -78,7 +78,7 @@ export function ApiKeyDialog({ open, onOpenChange, apiKey, currentUserId, onSave
     }
 
     onSave(newApiKey)
-    toast.success(apiKey ? "API Key actualizada" : "API Key creada exitosamente")
+    // No mostrar toast aquí, lo maneja App.tsx
     onOpenChange(false)
   }
 
