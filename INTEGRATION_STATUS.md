@@ -1,6 +1,21 @@
 # 🎯 ESTADO FINAL DE INTEGRACIÓN - SISTEMA DE LOTERÍA DE ANIMALITOS
 
-> Actualización corta: Módulo 7 (Sorteos) integrado con Supabase + fallback local (2025-11-07)
+> **Actualización más reciente:** Módulo 9 (Retiros) completamente integrado con Supabase (2025-11-07)
+
+**🎉 MÓDULO 9 - RETIROS COMPLETADO:**
+- Hook: `src/hooks/use-supabase-withdrawals.ts` - Hook dedicado para operaciones CRUD de retiros
+- Componente: `WithdrawDialog.tsx` mejorado - Soporte para múltiples potes, validación en tiempo real, montos rápidos
+- Funcionalidad: Botón "Retirar" en tarjetas de potes ahora funciona completamente con Supabase
+- Base de datos: Tabla `withdrawals` con seguimiento completo y auditoría
+- Pruebas: Script `test-withdrawals-module.mjs` para verificar funcionamiento
+
+Cómo usar:
+1) Ir al Dashboard en la aplicación
+2) Hacer clic en "Retirar" en cualquier tarjeta de pote con balance
+3) Seleccionar pote y monto en el diálogo mejorado
+4) Confirmar retiro - se guarda en Supabase y actualiza balance inmediatamente
+
+> Actualización previa: Módulo 7 (Sorteos) integrado con Supabase + fallback local (2025-11-07)
 
 - Hook: `src/hooks/use-supabase-draws.ts`
    - Lee/crea/actualiza/borra en la tabla `draws` (campos reales: `lottery_id`, `lottery_name`, `winning_animal_number`, `winning_animal_name`, `draw_time`, `total_payout`, `winners_count`).
@@ -35,10 +50,11 @@ Resumen de verificación técnica reciente:
 
 ## 📊 RESUMEN EJECUTIVO
 
-**🎯 PUNTUACIÓN GENERAL: 29/29 (100%) - ¡PERFECTO!**
+**🎯 PUNTUACIÓN GENERAL: 32/32 (100%) - ¡PERFECTO!**
 
-✅ **6 de 6 módulos completamente funcionales al 100%**
+✅ **7 de 7 módulos completamente funcionales al 100%**
 🎉 **TODOS LOS MÓDULOS OPERANDO PERFECTAMENTE**
+🎉 **MÓDULO 9 - RETIROS RECIÉN COMPLETADO**
 
 ---
 
@@ -420,7 +436,7 @@ created_at ↔ timestamp
 - Registrar resultados en `draws`
 - Calcular y distribuir premios
 
-### Módulo 8: POTES (Pendiente)
+### Módulo 8: POTES (Listo)
 - Leer balances desde `pots` table
 - Actualizar balances
 - Realizar transferencias

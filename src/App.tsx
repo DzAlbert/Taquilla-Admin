@@ -30,6 +30,7 @@ import { useSupabaseLotteries } from "@/hooks/use-supabase-lotteries"
 import { useSupabaseDraws } from "@/hooks/use-supabase-draws"
 import { useSupabaseBets } from "@/hooks/use-supabase-bets"
 import { useSupabasePots } from "@/hooks/use-supabase-pots"
+import { useSupabaseWithdrawals } from "@/hooks/use-supabase-withdrawals"
 import { Plus, Ticket, Trophy, Vault, ListBullets, Calendar, Pencil, Trash, Users, ShieldCheck, SignOut, MagnifyingGlass, Funnel, ChartLine, Key, Copy, Eye, EyeSlash } from "@phosphor-icons/react"
 import { toast } from "sonner"
 import { Toaster } from "@/components/ui/sonner"
@@ -46,12 +47,20 @@ function App() {
   const { 
     pots, 
     transfers, 
-    withdrawals, 
     distributeBetToPots, 
-    createTransfer, 
-    createWithdrawal,
-    deductFromPot
+    createTransfer,
+    deductFromPot,
+    updatePotBalance
   } = useSupabasePots()
+  
+  // Hook específico para retiros (Módulo 9)
+  const {
+    withdrawals: moduleWithdrawals,
+    isLoading: withdrawalsLoading,
+    createWithdrawal: createModuleWithdrawal,
+    withdrawalStats,
+    testConnection: testWithdrawalsConnection
+  } = useSupabaseWithdrawals()
   const [users, setUsers] = useKV<User[]>("users", [])
   const [apiKeys, setApiKeys] = useKV<ApiKey[]>("apiKeys", [])
 
@@ -213,11 +222,14 @@ function App() {
     await createTransfer(fromPotName, toPotName, amount)
   }
 
-  const handleWithdraw = async (amount: number) => {
-    const currentPots = pots || INITIAL_POTS
-    const fromPotName = currentPots[2].name // Pote de Ganancias
+  // Función actualizada para el nuevo módulo de retiros
+  const handleWithdraw = async (pot: any, amount: number) => {
+    const updatePotBalanceWrapper = async (potName: string, newBalance: number) => {
+      await updatePotBalance(potName, newBalance)
+    }
     
-    await createWithdrawal(fromPotName, amount)
+    const success = await createModuleWithdrawal(pot, amount, updatePotBalanceWrapper)
+    return success
   }
 
   const handleDraw = async (result: DrawResult, winners: Bet[]) => {
@@ -375,7 +387,7 @@ function App() {
   const currentLotteries = supabaseLotteries || []
   const currentDraws = draws || []
   const currentTransfers = transfers || []
-  const currentWithdrawals = withdrawals || []
+  const currentWithdrawals = moduleWithdrawals || []
   const currentUsers = supabaseUsers || []
   const currentRoles = roles || []
   const currentApiKeys = apiKeys || []
@@ -539,7 +551,10 @@ function App() {
                   pot={pot}
                   index={index}
                   onTransfer={openTransferDialog}
-                  onWithdraw={() => setWithdrawDialogOpen(true)}
+                  onWithdraw={(potIndex) => {
+                    // Abrir diálogo con el pote preseleccionado
+                    setWithdrawDialogOpen(true)
+                  }}
                 />
               ))}
             </div>
@@ -1731,8 +1746,9 @@ function App() {
       <WithdrawDialog
         open={withdrawDialogOpen}
         onOpenChange={setWithdrawDialogOpen}
-        availableBalance={currentPots[2].balance}
+        pots={currentPots}
         onWithdraw={handleWithdraw}
+        isLoading={withdrawalsLoading}
       />
 
       <DrawDialog
