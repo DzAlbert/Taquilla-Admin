@@ -97,7 +97,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 tabIndex={-1}
                 title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
-                {showPassword ? <Eye className="h-4 w-4" /> : <EyeSlash className="h-4 w-4" />}
+                {showPassword ? <EyeSlash className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
           </div>
