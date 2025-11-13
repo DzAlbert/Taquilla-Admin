@@ -58,15 +58,35 @@ export function useSupabaseAuth() {
             .single()
 
           if (!error && userData) {
-            // Usuario real de Supabase
+            // Obtener roles completos con permisos
+            const { data: userRolesData, error: rolesError } = await supabase
+              .from('user_roles')
+              .select('*, roles(*)')
+              .eq('user_id', userId)
+
+            const roles = (userRolesData || []).map((ur: any) => ({
+              id: ur.roles.id,
+              name: ur.roles.name,
+              description: ur.roles.description || '',
+              permissions: ur.roles.permissions || [],
+              is_system: ur.roles.is_system || false
+            }))
+
+            // Combinar todos los permisos de todos los roles
+            const allPermissions = roles.reduce((acc: string[], role: any) => {
+              return [...acc, ...role.permissions]
+            }, [])
+
+            // Usuario real de Supabase con permisos correctos
             const user: SupabaseUser = {
               id: userData.id,
               name: userData.name,
               email: userData.email,
               is_active: userData.is_active,
-              roles: userData.roles || [],
-              all_permissions: userData.all_permissions || []
+              roles: roles,
+              all_permissions: [...new Set(allPermissions)] // Eliminar duplicados
             }
+            console.log('Usuario cargado desde Supabase:', user.email, 'Permisos:', user.all_permissions)
             setCurrentUser(user)
             setIsLoading(false)
             return
@@ -103,88 +123,14 @@ export function useSupabaseAuth() {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Usuarios de prueba con UUIDs válidos
-      const testUsers = {
-        'admin@loteria.com': {
-          password: 'admin123',
-          user: {
-            name: 'Administrador Principal',
-            email: 'admin@loteria.com',
-            roles: [{
-              id: crypto.randomUUID ? crypto.randomUUID() : 'admin-role-uuid',
-              name: 'Super Administrador',
-              description: 'Acceso completo al sistema',
-              permissions: ['*'],
-              is_system: true
-            }],
-            all_permissions: ['*']
-          }
-        },
-        'juan@loteria.com': {
-          password: 'usuario123',
-          user: {
-            name: 'Juan Pérez',
-            email: 'juan@loteria.com',
-            roles: [{
-              id: crypto.randomUUID ? crypto.randomUUID() : 'operator-role-uuid',
-              name: 'Operador',
-              description: 'Operaciones de lotería',
-              permissions: ['lotteries.read', 'bets.read', 'bets.create'],
-              is_system: false
-            }],
-            all_permissions: ['lotteries.read', 'bets.read', 'bets.create']
-          }
-        },
-        'maria@loteria.com': {
-          password: 'usuario123',
-          user: {
-            name: 'María García',
-            email: 'maria@loteria.com',
-            roles: [{
-              id: crypto.randomUUID ? crypto.randomUUID() : 'supervisor-role-uuid',
-              name: 'Supervisor',
-              description: 'Supervisión y reportes',
-              permissions: ['lotteries.read', 'bets.read', 'draws.read', 'reports.read'],
-              is_system: false
-            }],
-            all_permissions: ['lotteries.read', 'bets.read', 'draws.read', 'reports.read']
-          }
-        }
-      }
-
-      // Verificar si es un usuario de prueba
-      const testUser = testUsers[email as keyof typeof testUsers]
-      if (testUser && password === testUser.password) {
-        // Generar UUID válido
-        const userUUID = crypto.randomUUID ? crypto.randomUUID() : 
-          'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            const r = Math.random() * 16 | 0;
-            const v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-          });
-        
-        const user: SupabaseUser = {
-          id: userUUID,
-          name: testUser.user.name,
-          email: testUser.user.email,
-          is_active: true,
-          roles: testUser.user.roles,
-          all_permissions: testUser.user.all_permissions
-        }
-        
-        setCurrentUserId(userUUID)
-        setCurrentUser(user)
-        return { success: true }
-      }
-
-      // Para otros usuarios, intentar autenticación real con Supabase
+      // Para todos los usuarios, intentar autenticación real con Supabase
       if (!isSupabaseConfigured()) {
-        return { success: false, error: 'Credenciales incorrectas' }
+        return { success: false, error: 'Sistema no configurado. Contacte al administrador' }
       }
 
       const { data: user, error } = await supabase
         .from('users')
-        .select('id, password_hash, is_active')
+        .select('id, password_hash, is_active, email')
         .eq('email', email)
         .single()
 
@@ -196,14 +142,18 @@ export function useSupabaseAuth() {
         return { success: false, error: 'Usuario inactivo. Contacte al administrador' }
       }
 
+      // Verificar contraseña (simple comparación por ahora)
       const passwordMatch = await verifyPassword(password, user.password_hash)
       
       if (!passwordMatch) {
         return { success: false, error: 'Credenciales incorrectas' }
       }
 
-      // Usuario autenticado correctamente
+      // Usuario autenticado correctamente - cargar datos completos
+      console.log('Usuario autenticado:', user.email)
       setCurrentUserId(user.id)
+      
+      // Los datos del usuario se cargarán automáticamente por el useEffect
       return { success: true }
     } catch (error) {
       console.error('Login error:', error)
@@ -234,9 +184,15 @@ export function useSupabaseAuth() {
 }
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  if (hash === password) {
-    return true
+  // Si el hash contiene "hashed_" es un hash simple del formato: hashed_{password}_{timestamp}
+  if (hash.startsWith('hashed_')) {
+    const parts = hash.split('_')
+    if (parts.length >= 2) {
+      const storedPassword = parts.slice(1, -1).join('_') // Todo excepto "hashed" y el timestamp
+      return password === storedPassword
+    }
   }
   
-  return false
+  // Comparación directa como fallback
+  return hash === password
 }
