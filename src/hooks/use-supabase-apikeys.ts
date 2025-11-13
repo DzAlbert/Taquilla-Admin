@@ -124,17 +124,6 @@ export function useSupabaseApiKeys(): UseSupabaseApiKeysReturn {
     }
   }
 
-  // Verificar si hay usuario autenticado
-  const getAuthenticatedUser = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      return user
-    } catch (err) {
-      console.warn('Error obteniendo usuario:', err)
-      return null
-    }
-  }
-
   // Cargar estadísticas
   const loadStats = async (): Promise<void> => {
     try {
@@ -171,58 +160,48 @@ export function useSupabaseApiKeys(): UseSupabaseApiKeysReturn {
       if (isConnected) {
         console.log('🔑 Cargando API Keys desde Supabase...')
         
-        // Verificar si hay usuario autenticado
-        const user = await getAuthenticatedUser()
-        
-        if (!user) {
-          console.log('⚠️ No hay usuario autenticado, usando solo localStorage')
-          const localKeys = loadFromLocalStorage()
-          setApiKeys(localKeys)
-          console.log(`📱 ${localKeys.length} API Keys cargadas desde localStorage`)
-        } else {
-          const { data, error: supabaseError } = await supabase
-            .from('api_keys')
-            .select(`
-              id,
-              name,
-              key_prefix,
-              description,
-              is_active,
-              permissions,
-              created_at,
-              created_by,
-              last_used_at,
-              updated_at
-            `)
-            .order('created_at', { ascending: false })
+        const { data, error: supabaseError } = await supabase
+          .from('api_keys')
+          .select(`
+            id,
+            name,
+            key_prefix,
+            description,
+            is_active,
+            permissions,
+            created_at,
+            created_by,
+            last_used_at,
+            updated_at
+          `)
+          .order('created_at', { ascending: false })
 
-          if (supabaseError) {
-            throw new Error(`Error Supabase: ${supabaseError.message}`)
-          }
-
-          // Transformar datos de Supabase al formato local
-          const transformedKeys: ApiKey[] = (data || []).map(item => ({
-            id: item.id,
-            name: item.name,
-            key: `${item.key_prefix}••••••••••••••••••••••••••••••••••••••••••••••`,
-            description: item.description,
-            isActive: item.is_active,
-            permissions: Array.isArray(item.permissions) ? item.permissions : [],
-            createdAt: item.created_at,
-            createdBy: item.created_by,
-            lastUsed: item.last_used_at
-          }))
-
-          setApiKeys(transformedKeys)
-          
-          // Guardar en localStorage como respaldo
-          saveToLocalStorage(transformedKeys)
-          
-          // Cargar estadísticas si están disponibles
-          await loadStats()
-          
-          console.log(`✅ ${transformedKeys.length} API Keys cargadas desde Supabase`)
+        if (supabaseError) {
+          throw new Error(`Error Supabase: ${supabaseError.message}`)
         }
+
+        // Transformar datos de Supabase al formato local
+        const transformedKeys: ApiKey[] = (data || []).map(item => ({
+          id: item.id,
+          name: item.name,
+          key: `${item.key_prefix}••••••••••••••••••••••••••••••••••••••••••••••`,
+          description: item.description,
+          isActive: item.is_active,
+          permissions: Array.isArray(item.permissions) ? item.permissions : [],
+          createdAt: item.created_at,
+          createdBy: item.created_by,
+          lastUsed: item.last_used_at
+        }))
+
+        setApiKeys(transformedKeys)
+        
+        // Guardar en localStorage como respaldo
+        saveToLocalStorage(transformedKeys)
+        
+        // Cargar estadísticas si están disponibles
+        await loadStats()
+        
+        console.log(`✅ ${transformedKeys.length} API Keys cargadas desde Supabase`)
       } else {
         // Fallback a localStorage
         console.log('📱 Usando localStorage para API Keys...')
@@ -263,38 +242,38 @@ export function useSupabaseApiKeys(): UseSupabaseApiKeysReturn {
       let supabaseSuccess = false
       const isConnected = await testConnection()
       
-      // Intentar guardar en Supabase si hay conexión y usuario autenticado
-      if (isConnected) {
+      // Intentar guardar en Supabase si hay conexión y created_by válido
+      if (isConnected && apiKeyData.createdBy) {
         console.log('💾 Intentando crear API Key en Supabase...')
+        console.log('   Usuario creador:', apiKeyData.createdBy)
         
-        const user = await getAuthenticatedUser()
-        
-        if (user) {
-          const { error } = await supabase
-            .from('api_keys')
-            .insert({
-              id: newApiKey.id,
-              name: apiKeyData.name,
-              key_hash: keyHash,
-              key_prefix: keyPrefix,
-              description: apiKeyData.description,
-              is_active: apiKeyData.isActive,
-              permissions: apiKeyData.permissions,
-              created_by: user.id
-            })
+        const { error } = await supabase
+          .from('api_keys')
+          .insert({
+            id: newApiKey.id,
+            name: apiKeyData.name,
+            key_hash: keyHash,
+            key_prefix: keyPrefix,
+            description: apiKeyData.description,
+            is_active: apiKeyData.isActive,
+            permissions: apiKeyData.permissions,
+            created_by: apiKeyData.createdBy
+          })
 
-          if (error) {
-            console.warn(`⚠️ Error guardando en Supabase: ${error.message}`)
-            console.log('🔄 Continuando con localStorage...')
-          } else {
-            console.log('✅ API Key creada en Supabase')
-            supabaseSuccess = true
-          }
+        if (error) {
+          console.warn(`⚠️ Error guardando en Supabase: ${error.message}`)
+          console.log('   Detalles:', error)
+          console.log('🔄 Continuando con localStorage...')
         } else {
-          console.log('⚠️ No hay usuario autenticado, guardando solo en localStorage')
+          console.log('✅ API Key creada exitosamente en Supabase')
+          supabaseSuccess = true
         }
       } else {
-        console.log('📱 Supabase no disponible, guardando en localStorage...')
+        if (!isConnected) {
+          console.log('📱 Supabase no disponible, guardando en localStorage...')
+        } else {
+          console.log('⚠️ No hay createdBy, guardando solo en localStorage')
+        }
       }
 
       // Siempre actualizar estado local y localStorage
@@ -349,28 +328,25 @@ export function useSupabaseApiKeys(): UseSupabaseApiKeysReturn {
       if (isConnected) {
         console.log('🔄 Actualizando API Key en Supabase...')
         
-        const user = await getAuthenticatedUser()
-        
-        if (user) {
-          // Preparar datos para Supabase
-          const supabaseUpdates: any = {}
-          if (updates.name !== undefined) supabaseUpdates.name = updates.name
-          if (updates.description !== undefined) supabaseUpdates.description = updates.description
-          if (updates.isActive !== undefined) supabaseUpdates.is_active = updates.isActive
-          if (updates.permissions !== undefined) supabaseUpdates.permissions = updates.permissions
+        // Preparar datos para Supabase
+        const supabaseUpdates: any = {}
+        if (updates.name !== undefined) supabaseUpdates.name = updates.name
+        if (updates.description !== undefined) supabaseUpdates.description = updates.description
+        if (updates.isActive !== undefined) supabaseUpdates.is_active = updates.isActive
+        if (updates.permissions !== undefined) supabaseUpdates.permissions = updates.permissions
 
-          const { error } = await supabase
-            .from('api_keys')
-            .update(supabaseUpdates)
-            .eq('id', id)
+        const { error } = await supabase
+          .from('api_keys')
+          .update(supabaseUpdates)
+          .eq('id', id)
 
-          if (error) {
-            console.warn(`⚠️ Error actualizando en Supabase: ${error.message}`)
-            console.log('🔄 Continuando con actualización local...')
-          } else {
-            console.log('✅ API Key actualizada en Supabase')
-            supabaseSuccess = true
-          }
+        if (error) {
+          console.warn(`⚠️ Error actualizando en Supabase: ${error.message}`)
+          console.log('   Detalles:', error)
+          console.log('🔄 Continuando con actualización local...')
+        } else {
+          console.log('✅ API Key actualizada exitosamente en Supabase')
+          supabaseSuccess = true
         }
       }
 
@@ -417,21 +393,18 @@ export function useSupabaseApiKeys(): UseSupabaseApiKeysReturn {
       if (isConnected) {
         console.log('🗑️ Eliminando API Key de Supabase...')
         
-        const user = await getAuthenticatedUser()
-        
-        if (user) {
-          const { error } = await supabase
-            .from('api_keys')
-            .delete()
-            .eq('id', id)
+        const { error } = await supabase
+          .from('api_keys')
+          .delete()
+          .eq('id', id)
 
-          if (error) {
-            console.warn(`⚠️ Error eliminando de Supabase: ${error.message}`)
-            console.log('🔄 Continuando con eliminación local...')
-          } else {
-            console.log('✅ API Key eliminada de Supabase')
-            supabaseSuccess = true
-          }
+        if (error) {
+          console.warn(`⚠️ Error eliminando de Supabase: ${error.message}`)
+          console.log('   Detalles:', error)
+          console.log('🔄 Continuando con eliminación local...')
+        } else {
+          console.log('✅ API Key eliminada exitosamente de Supabase')
+          supabaseSuccess = true
         }
       }
 
@@ -516,9 +489,8 @@ export function useSupabaseApiKeys(): UseSupabaseApiKeysReturn {
   const syncWithSupabase = async (): Promise<void> => {
     try {
       const isConnected = await testConnection()
-      const user = await getAuthenticatedUser()
       
-      if (isConnected && user) {
+      if (isConnected) {
         console.log('🔄 Sincronizando con Supabase...')
         await loadApiKeys()
       }
