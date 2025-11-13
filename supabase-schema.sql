@@ -343,8 +343,8 @@ INSERT INTO roles (id, name, description, permissions, is_system) VALUES
   (
     uuid_generate_v4(),
     'Vendedor',
-    'Puede registrar jugadas y ver loterías',
-    '["lotteries", "bets", "reports"]'::jsonb,
+    'Puede realizar sorteos y ver loterías',
+    '["lotteries", "reports"]'::jsonb,
     TRUE
   )
 ON CONFLICT (name) DO NOTHING;
