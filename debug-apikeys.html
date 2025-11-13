@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug API Keys - LocalStorage & Supabase</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-left: 4px solid #2196F3;
+            padding-left: 15px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.danger:hover {
+            background: #da190b;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #4CAF50;
+            color: white;
+        }
+        .status.error {
+            background: #f44336;
+            color: white;
+        }
+        .status.warning {
+            background: #ff9800;
+            color: white;
+        }
+        .log {
+            margin: 5px 0;
+            padding: 8px;
+            background: white;
+            border-left: 3px solid #2196F3;
+            font-size: 13px;
+        }
+        .log.error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .log.success {
+            border-left-color: #4CAF50;
+            background: #e8f5e9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug API Keys - LocalStorage & Supabase</h1>
+        
+        <div class="section">
+            <button onclick="checkLocalStorage()">📱 Verificar localStorage</button>
+            <button onclick="checkSupabase()" class="secondary">☁️ Verificar Supabase</button>
+            <button onclick="testCreateApiKey()" class="secondary">🧪 Test Crear API Key</button>
+            <button onclick="clearLocalStorage()" class="danger">🗑️ Limpiar localStorage</button>
+            <button onclick="clearLogs()">🧹 Limpiar Logs</button>
+        </div>
+
+        <h2>📊 Estado Actual</h2>
+        <div id="status" class="section"></div>
+
+        <h2>📝 Logs</h2>
+        <div id="logs" class="section"></div>
+
+        <h2>📦 Datos en localStorage</h2>
+        <div id="localStorage" class="section">
+            <pre>Haz click en "Verificar localStorage" para ver los datos</pre>
+        </div>
+
+        <h2>☁️ Datos en Supabase</h2>
+        <div id="supabase" class="section">
+            <pre>Haz click en "Verificar Supabase" para ver los datos</pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+        const SUPABASE_URL = 'https://hnsbttqzrbosjazltvay.supabase.co'
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhuc2J0dHF6cmJvc2phemx0dmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA4NDIzMTksImV4cCI6MjA0NjQxODMxOX0.Gw1-W4Sq7JIvVPhXlr3rNyRBOdyB9pLYc0xGRmYf-yo'
+        
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+        
+        window.supabase = supabase
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs')
+            const logEntry = document.createElement('div')
+            logEntry.className = `log ${type}`
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`
+            logsDiv.insertBefore(logEntry, logsDiv.firstChild)
+        }
+
+        function updateStatus(html) {
+            document.getElementById('status').innerHTML = html
+        }
+
+        window.checkLocalStorage = function() {
+            log('Verificando localStorage...', 'info')
+            
+            const apiKeys = localStorage.getItem('apiKeys')
+            const lastSync = localStorage.getItem('apiKeys_lastSync')
+            
+            let html = '<h3>Estado de localStorage:</h3>'
+            
+            if (apiKeys) {
+                const parsed = JSON.parse(apiKeys)
+                html += `<p><span class="status success">ENCONTRADO</span> ${parsed.length} API Key(s)</p>`
+                html += `<p>Última sincronización: ${lastSync || 'Desconocida'}</p>`
+                
+                document.getElementById('localStorage').innerHTML = '<pre>' + JSON.stringify(parsed, null, 2) + '</pre>'
+                log(`${parsed.length} API Keys encontradas en localStorage`, 'success')
+            } else {
+                html += '<p><span class="status warning">VACÍO</span> No hay API Keys en localStorage</p>'
+                document.getElementById('localStorage').innerHTML = '<pre>No hay datos</pre>'
+                log('localStorage está vacío', 'warning')
+            }
+            
+            updateStatus(html)
+        }
+
+        window.checkSupabase = async function() {
+            log('Verificando Supabase...', 'info')
+            
+            try {
+                const { data, error } = await supabase
+                    .from('api_keys')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+
+                let html = '<h3>Estado de Supabase:</h3>'
+                
+                if (error) {
+                    html += `<p><span class="status error">ERROR</span> ${error.message}</p>`
+                    document.getElementById('supabase').innerHTML = '<pre>' + JSON.stringify(error, null, 2) + '</pre>'
+                    log(`Error de Supabase: ${error.message}`, 'error')
+                } else {
+                    html += `<p><span class="status success">CONECTADO</span> ${data.length} API Key(s) en Supabase</p>`
+                    document.getElementById('supabase').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>'
+                    log(`${data.length} API Keys encontradas en Supabase`, 'success')
+                }
+                
+                updateStatus(html)
+            } catch (err) {
+                log(`Error: ${err.message}`, 'error')
+                updateStatus('<p><span class="status error">ERROR</span> No se pudo conectar a Supabase</p>')
+            }
+        }
+
+        window.testCreateApiKey = async function() {
+            log('Iniciando test de creación de API Key...', 'info')
+            
+            const apiKeyData = {
+                id: crypto.randomUUID(),
+                name: 'Test Debug Tool ' + new Date().toISOString(),
+                key_hash: 'test_hash_' + Math.random().toString(36),
+                key_prefix: 'sk_test',
+                description: 'API Key de prueba desde debug tool',
+                is_active: true,
+                permissions: ['read_lotteries', 'read_draws'],
+                created_by: '3e188dd5-4cdc-483f-b705-d2034005e1f0'
+            }
+            
+            log('Datos a insertar: ' + JSON.stringify(apiKeyData), 'info')
+            
+            try {
+                const { data, error } = await supabase
+                    .from('api_keys')
+                    .insert(apiKeyData)
+                    .select()
+
+                if (error) {
+                    log(`❌ Error creando API Key: ${error.message}`, 'error')
+                    alert('Error: ' + error.message)
+                } else {
+                    log('✅ API Key creada exitosamente en Supabase!', 'success')
+                    alert('API Key creada! Revisa los logs y Supabase.')
+                    checkSupabase()
+                }
+            } catch (err) {
+                log(`❌ Error: ${err.message}`, 'error')
+                alert('Error: ' + err.message)
+            }
+        }
+
+        window.clearLocalStorage = function() {
+            if (confirm('¿Seguro que quieres limpiar el localStorage?')) {
+                localStorage.removeItem('apiKeys')
+                localStorage.removeItem('apiKeys_lastSync')
+                log('localStorage limpiado', 'success')
+                checkLocalStorage()
+            }
+        }
+
+        window.clearLogs = function() {
+            document.getElementById('logs').innerHTML = ''
+        }
+
+        // Ejecutar al cargar
+        log('Debug tool cargado', 'success')
+        checkLocalStorage()
+    </script>
+</body>
+</html>
