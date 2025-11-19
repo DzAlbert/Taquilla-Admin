@@ -4,15 +4,17 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency } from "@/lib/pot-utils"
-import { DrawResult, Lottery } from "@/lib/types"
+import { DrawResult, Lottery, Bet, User } from "@/lib/types"
 import { format, startOfDay, startOfWeek, startOfMonth } from "date-fns"
 import { es } from "date-fns/locale"
-import { Trophy, ChartBar } from "@phosphor-icons/react"
+import { Trophy, ChartBar, Storefront } from "@phosphor-icons/react"
 import { useState, useMemo } from "react"
 
 interface ReportsCardProps {
   draws: DrawResult[]
   lotteries: Lottery[]
+  bets?: Bet[]
+  users?: User[]
 }
 
 interface DrawsStats {
@@ -23,7 +25,7 @@ interface DrawsStats {
   averagePayout: number
 }
 
-export function ReportsCard({ draws, lotteries }: ReportsCardProps) {
+export function ReportsCard({ draws, lotteries, bets = [], users = [] }: ReportsCardProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month' | 'all'>('all')
 
   const now = new Date()
@@ -247,6 +249,72 @@ export function ReportsCard({ draws, lotteries }: ReportsCardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Top Taquillas */}
+      {bets.length > 0 && users.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Storefront className="h-5 w-5" />
+              Ventas por Taquilla
+            </CardTitle>
+            <CardDescription>
+              Taquillas con mayores ventas en el período seleccionado
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[200px]">
+              <div className="space-y-4">
+                {(() => {
+                  const taquillaStats = new Map<string, number>()
+                  
+                  // Filtrar apuestas por fecha
+                  const periodBets = bets.filter(bet => {
+                    const betDate = new Date(bet.timestamp)
+                    switch (selectedPeriod) {
+                      case 'today': return betDate >= todayStart
+                      case 'week': return betDate >= weekStart
+                      case 'month': return betDate >= monthStart
+                      default: return true
+                    }
+                  })
+
+                  periodBets.forEach(bet => {
+                    if (bet.userId) {
+                      const current = taquillaStats.get(bet.userId) || 0
+                      taquillaStats.set(bet.userId, current + bet.amount)
+                    }
+                  })
+
+                  const sortedTaquillas = Array.from(taquillaStats.entries())
+                    .map(([userId, amount]) => {
+                      const user = users.find(u => u.id === userId)
+                      return {
+                        name: user?.name || 'Desconocido',
+                        amount
+                      }
+                    })
+                    .sort((a, b) => b.amount - a.amount)
+
+                  if (sortedTaquillas.length === 0) {
+                    return <p className="text-sm text-muted-foreground text-center py-4">No hay ventas registradas en este período</p>
+                  }
+
+                  return sortedTaquillas.map((t, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-muted-foreground w-6">#{i + 1}</span>
+                        <span className="font-medium">{t.name}</span>
+                      </div>
+                      <span className="font-bold">{formatCurrency(t.amount)}</span>
+                    </div>
+                  ))
+                })()}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Resumen detallado */}
       {filteredDraws.length > 0 && (

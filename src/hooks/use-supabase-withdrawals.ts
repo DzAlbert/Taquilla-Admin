@@ -1,13 +1,9 @@
 import { useState, useCallback, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { Withdrawal, Pot } from '@/lib/types'
 
-// Configuración Supabase
-const supabaseUrl = 'https://dxfivioylmbpumzcpwtu.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR4Zml2aW95bG1icHVtemNwd3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNTI0MTksImV4cCI6MjA3NzgyODQxOX0.QlDhKclyo55RHIlz4sQC2G7yBy-L4KsZiaMBpWhXs-w'
-
-const supabase = createClient(supabaseUrl, supabaseKey)
+// Cliente Supabase compartido con fallback seguro definido en lib/supabase
 
 interface SupabaseWithdrawal {
   id: string
@@ -53,6 +49,10 @@ export function useSupabaseWithdrawals() {
   // Test de conexión
   const testConnection = useCallback(async (): Promise<boolean> => {
     try {
+      if (!isSupabaseConfigured()) {
+        setIsConnected(false)
+        return false
+      }
       const { data, error } = await supabase
         .from('withdrawals')
         .select('id')

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import { useKV } from '@github/spark/hooks'
 
 export interface SupabaseUser {
   id: string
@@ -18,19 +17,40 @@ export interface SupabaseUser {
 }
 
 export function useSupabaseAuth() {
-  const [currentUserId, setCurrentUserId] = useKV<string>('currentUserId', '')
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Solo cargar datos si hay un currentUserId válido
-    if (currentUserId) {
-      loadUserData(currentUserId)
-    } else {
-      setCurrentUser(null)
+    if (!isSupabaseConfigured()) {
       setIsLoading(false)
+      return
     }
-  }, [currentUserId])
+
+    // Verificar sesión actual
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setCurrentUserId(session.user.id)
+        loadUserData(session.user.id)
+      } else {
+        setIsLoading(false)
+      }
+    })
+
+    // Escuchar cambios en la autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setCurrentUserId(session.user.id)
+        loadUserData(session.user.id)
+      } else {
+        setCurrentUserId('')
+        setCurrentUser(null)
+        setIsLoading(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const loadUserData = async (userId: string) => {
     console.log('Loading user data for:', userId)
@@ -38,17 +58,6 @@ export function useSupabaseAuth() {
     try {
       setIsLoading(true)
       
-      // Verificar si es un UUID válido
-      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)
-      
-      if (!isValidUUID) {
-        console.error('Invalid UUID format:', userId)
-        setCurrentUser(null)
-        setIsLoading(false)
-        return
-      }
-
-      // Intentar cargar desde Supabase primero
       if (isSupabaseConfigured()) {
         try {
           const { data: userData, error } = await supabase
@@ -92,26 +101,12 @@ export function useSupabaseAuth() {
             return
           }
         } catch (supabaseError) {
-          console.log('Usuario no encontrado en Supabase, creando usuario temporal')
+          console.log('Error cargando usuario de Supabase:', supabaseError)
         }
       }
-
-      // Si no se encontró en Supabase, crear uno temporal
-      const tempUser: SupabaseUser = {
-        id: userId,
-        name: 'Usuario Temporal',
-        email: 'temp@loteria.com',
-        is_active: true,
-        roles: [{
-          id: crypto.randomUUID ? crypto.randomUUID() : 'temp-role-uuid',
-          name: 'Usuario Temporal',
-          description: 'Acceso temporal',
-          permissions: ['*'],
-          is_system: false
-        }],
-        all_permissions: ['*']
-      }
-      setCurrentUser(tempUser)
+      
+      // Si llegamos aquí, no se pudo cargar el usuario
+      setCurrentUser(null)
       
     } catch (error) {
       console.error('Error in loadUserData:', error)
@@ -123,47 +118,41 @@ export function useSupabaseAuth() {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Para todos los usuarios, intentar autenticación real con Supabase
       if (!isSupabaseConfigured()) {
         return { success: false, error: 'Sistema no configurado. Contacte al administrador' }
       }
 
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id, password_hash, is_active, email')
-        .eq('email', email)
-        .single()
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-      if (error || !user) {
-        return { success: false, error: 'Credenciales incorrectas' }
+      if (error) {
+        console.error('Login error:', error)
+        return { success: false, error: 'Credenciales incorrectas o error de conexión' }
       }
 
-      if (!user.is_active) {
-        return { success: false, error: 'Usuario inactivo. Contacte al administrador' }
+      if (data.user) {
+        console.log('Usuario autenticado:', data.user.email)
+        // La actualización del estado se maneja en onAuthStateChange
+        return { success: true }
       }
 
-      // Verificar contraseña (simple comparación por ahora)
-      const passwordMatch = await verifyPassword(password, user.password_hash)
-      
-      if (!passwordMatch) {
-        return { success: false, error: 'Credenciales incorrectas' }
-      }
-
-      // Usuario autenticado correctamente - cargar datos completos
-      console.log('Usuario autenticado:', user.email)
-      setCurrentUserId(user.id)
-      
-      // Los datos del usuario se cargarán automáticamente por el useEffect
-      return { success: true }
+      return { success: false, error: 'No se pudo iniciar sesión' }
     } catch (error) {
       console.error('Login error:', error)
       return { success: false, error: 'Error al iniciar sesión' }
     }
   }
 
-  const logout = () => {
-    setCurrentUserId('')
-    setCurrentUser(null)
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setCurrentUserId('')
+      setCurrentUser(null)
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   const hasPermission = (permission: string): boolean => {
@@ -181,18 +170,4 @@ export function useSupabaseAuth() {
     logout,
     hasPermission,
   }
-}
-
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  // Si el hash contiene "hashed_" es un hash simple del formato: hashed_{password}_{timestamp}
-  if (hash.startsWith('hashed_')) {
-    const parts = hash.split('_')
-    if (parts.length >= 2) {
-      const storedPassword = parts.slice(1, -1).join('_') // Todo excepto "hashed" y el timestamp
-      return password === storedPassword
-    }
-  }
-  
-  // Comparación directa como fallback
-  return hash === password
 }

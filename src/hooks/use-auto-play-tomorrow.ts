@@ -44,7 +44,7 @@ const shouldReactivate = (deactivatedAt: string): boolean => {
 
 export function useAutoPlayTomorrow(
   lotteries: Lottery[],
-  updateLottery: (id: string, lottery: Lottery) => Promise<void>
+  updateLottery: (id: string, lottery: Partial<Lottery>) => Promise<boolean>
 ) {
   // Registrar cuando una lotería se desactiva de "juega mañana"
   const onPlayTomorrowChange = useCallback((lotteryId: string, newValue: boolean) => {

@@ -27,7 +27,7 @@ export function useSupabaseRoles() {
           id: 'admin',
           name: 'Administrador',
           description: 'Acceso completo al sistema',
-          permissions: ['dashboard', 'lotteries', 'bets', 'winners', 'history', 'users', 'roles'],
+          permissions: ['dashboard', 'lotteries', 'bets', 'winners', 'history', 'users', 'roles', 'taquillas'],
           createdAt: new Date().toISOString(),
           isSystem: true,
         },
@@ -35,7 +35,7 @@ export function useSupabaseRoles() {
           id: 'operator',
           name: 'Operador',
           description: 'Operaciones básicas',
-          permissions: ['dashboard', 'lotteries', 'bets', 'winners'],
+          permissions: ['dashboard', 'lotteries', 'bets', 'winners', 'taquillas'],
           createdAt: new Date().toISOString(),
           isSystem: false,
         }
@@ -92,7 +92,7 @@ export function useSupabaseRoles() {
           id: 'admin',
           name: 'Administrador',
           description: 'Acceso completo al sistema',
-          permissions: ['dashboard', 'lotteries', 'bets', 'winners', 'history', 'users', 'roles'],
+          permissions: ['dashboard', 'lotteries', 'bets', 'winners', 'history', 'users', 'roles', 'taquillas'],
           createdAt: new Date().toISOString(),
           isSystem: true,
         }

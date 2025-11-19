@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+// Provide safe development fallbacks so the app doesn't crash when
+// environment variables are not set locally. Production should still
+// set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:9999'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'public-anon-key'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -20,7 +23,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 })
 
 export const isSupabaseConfigured = (): boolean => {
-  return !!(supabaseUrl && supabaseAnonKey)
+  return !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 }
 
 export type Database = {

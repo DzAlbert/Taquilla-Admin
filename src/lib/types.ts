@@ -27,6 +27,7 @@ export interface Bet {
   timestamp: string
   potentialWin: number
   isWinner: boolean
+  userId?: string
 }
 
 export interface DrawResult {
@@ -73,6 +74,7 @@ export type ModulePermission =
   | "users"
   | "roles"
   | "api-keys"
+  | "taquillas"
 
 export interface Role {
   id: string
@@ -154,3 +156,19 @@ export const ANIMALS = [
   { number: "39", name: "Tijeras" },
   { number: "40", name: "Mesa" },
 ]
+
+// Nueva entidad: Taquillas
+export interface Taquilla {
+  id: string
+  fullName: string
+  address: string
+  telefono?: string
+  email: string
+  username?: string
+  password?: string
+  passwordHash?: string
+  isApproved: boolean
+  approvedBy?: string
+  approvedAt?: string
+  createdAt: string
+}

@@ -22,6 +22,7 @@ const AVAILABLE_MODULES: { value: ModulePermission; label: string; description: 
   { value: "history", label: "Historial", description: "Ver transferencias y retiros" },
   { value: "users", label: "Usuarios", description: "Gestionar usuarios del sistema" },
   { value: "roles", label: "Roles", description: "Crear y editar roles" },
+  { value: "taquillas", label: "Taquillas", description: "Registrar, ver y aprobar taquillas" },
 ]
 
 export function RoleDialog({ open, onOpenChange, role, onSave }: RoleDialogProps) {

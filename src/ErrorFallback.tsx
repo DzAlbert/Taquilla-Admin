@@ -4,9 +4,13 @@ import { Button } from "./components/ui/button";
 import { AlertTriangleIcon, RefreshCwIcon } from "lucide-react";
 
 export const ErrorFallback = ({ error, resetErrorBoundary }) => {
-  // When encountering an error in the development mode, rethrow it and don't display the boundary.
-  // The parent UI will take care of showing a more helpful dialog.
-  if (import.meta.env.DEV) throw error;
+  // In development, don't re-throw — show the fallback UI so the developer
+  // can inspect the error details in the browser. The previous behavior
+  // re-threw the error which caused a blank screen in some setups.
+  if (import.meta.env.DEV) {
+    console.error('ErrorBoundary caught error (DEV):', error)
+    // continue to render the fallback UI below
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">

@@ -12,6 +12,7 @@ export interface SupabaseBet {
   potential_win: number
   is_winner: boolean
   created_at: string
+  user_id?: string
 }
 
 export interface Bet {
@@ -24,6 +25,7 @@ export interface Bet {
   potentialWin: number
   isWinner: boolean
   timestamp: string
+  userId?: string
 }
 
 // Función para mapear datos de Supabase al formato local
@@ -36,7 +38,8 @@ const mapSupabaseBet = (supabaseBet: SupabaseBet): Bet => ({
   amount: supabaseBet.amount,
   potentialWin: supabaseBet.potential_win,
   isWinner: supabaseBet.is_winner,
-  timestamp: supabaseBet.created_at
+  timestamp: supabaseBet.created_at,
+  userId: supabaseBet.user_id
 })
 
 // Función para mapear datos locales al formato de Supabase
@@ -47,7 +50,8 @@ const mapLocalBet = (localBet: Omit<Bet, 'id' | 'timestamp'>): Omit<SupabaseBet,
   animal_name: localBet.animalName,
   amount: localBet.amount,
   potential_win: localBet.potentialWin,
-  is_winner: localBet.isWinner || false
+  is_winner: localBet.isWinner || false,
+  user_id: localBet.userId
 })
 
 export function useSupabaseBets() {

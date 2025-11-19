@@ -4,13 +4,11 @@
  */
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import type { ApiKey, ApiKeyPermission } from '@/lib/types'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
-// Configuración de Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const supabase = createClient(supabaseUrl, supabaseKey)
+// Cliente Supabase compartido con fallback seguro
+// Nota: en desarrollo usa valores inofensivos si faltan las env vars
 
 // Tipos específicos para el hook
 interface ApiKeyStats {
@@ -112,6 +110,9 @@ export function useSupabaseApiKeys(): UseSupabaseApiKeysReturn {
   // Test connection to Supabase
   const testConnection = async (): Promise<boolean> => {
     try {
+      if (!isSupabaseConfigured()) {
+        return false
+      }
       const { error } = await supabase
         .from('api_keys')
         .select('count')

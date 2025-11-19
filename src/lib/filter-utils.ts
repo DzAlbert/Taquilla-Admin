@@ -1,4 +1,4 @@
-import { Lottery, Bet, User, Role } from "./types"
+import { Lottery, Bet, User, Role, Taquilla } from "./types"
 
 export function filterLotteries(
   lotteries: Lottery[],
@@ -116,4 +116,31 @@ export function filterRoles(
       role.description?.toLowerCase().includes(term) ||
       role.permissions?.some((perm) => perm?.toLowerCase().includes(term))
   )
+}
+
+export function filterTaquillas(
+  taquillas: Taquilla[],
+  searchTerm: string,
+  filters: {
+    isActive?: boolean
+  }
+): Taquilla[] {
+  let filtered = taquillas
+
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase()
+    filtered = filtered.filter(
+      (t) =>
+        t.fullName?.toLowerCase().includes(term) ||
+        t.email?.toLowerCase().includes(term) ||
+        t.address?.toLowerCase().includes(term) ||
+        t.telefono?.toLowerCase().includes(term)
+    )
+  }
+
+  if (filters.isActive !== undefined) {
+    filtered = filtered.filter((t) => t.isApproved === filters.isActive)
+  }
+
+  return filtered
 }

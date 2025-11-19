@@ -212,42 +212,60 @@ export function useSupabaseUsers() {
 
         console.log(`✅ Email ${userData.email} disponible en Supabase`)
 
-        const password = userData.password || 'changeme123'
-        const passwordHash = `hashed_${password}_${Date.now()}`
+        const password = userData.password || '123456' // Contraseña por defecto si no se provee
         
-        console.log(`📝 Creando usuario en Supabase...`)
-        const { data: supabaseUser, error: userError } = await supabase
-          .from('users')
-          .insert([
-            {
-              name: userData.name,
-              email: userData.email,
-              password_hash: passwordHash,
-              is_active: userData.isActive,
-              created_by: null // Evitar problema de foreign key
-            }
-          ])
-          .select()
+        console.log(`📝 Creando usuario usando método híbrido (SignUp + RPC)...`)
+        
+        // 1. Crear cliente temporal para no afectar la sesión actual
+        // Usamos createClient directamente de supabase-js
+        const { createClient } = await import('@supabase/supabase-js')
+        const tempClient = createClient(
+          import.meta.env.VITE_SUPABASE_URL,
+          import.meta.env.VITE_SUPABASE_ANON_KEY,
+          { auth: { persistSession: false } } // Importante: no guardar sesión
+        )
 
-        if (userError) {
-          // Si es error de duplicado, mostrar mensaje específico
-          if (userError.message.includes('duplicate key') || userError.message.includes('unique constraint')) {
-            toast.error('Este email ya está registrado en Supabase')
-            return false
+        // 2. Crear usuario en Auth usando signUp (Supabase maneja la encriptación y estructura)
+        const { data: authData, error: signUpError } = await tempClient.auth.signUp({
+          email: userData.email,
+          password: password,
+          options: {
+            data: { name: userData.name }
           }
-          throw userError
+        })
+
+        if (signUpError) {
+          console.error('Error en signUp:', signUpError)
+          throw signUpError
         }
 
-        // Obtener el primer usuario creado
-        const createdUser = supabaseUser && supabaseUser[0]
-        if (!createdUser) {
-          throw new Error('No se pudo crear el usuario en Supabase')
+        if (!authData.user) {
+          throw new Error('No se pudo crear el usuario en Auth')
+        }
+
+        const newUserId = authData.user.id
+        console.log('✅ Usuario creado en Auth:', newUserId)
+
+        // 3. Confirmar email y sincronizar con public.users usando RPC
+        // Esto evita el problema de "Email not confirmed" y asegura que esté en public.users
+        const { error: rpcError } = await supabase.rpc('confirm_user_and_sync', {
+          user_email: userData.email,
+          user_name: userData.name,
+          user_password_hash: `hashed_by_supabase_${Date.now()}`, // Referencia
+          is_active: userData.isActive
+        })
+
+        if (rpcError) {
+          console.error('Error confirmando usuario:', rpcError)
+          // Si falla la confirmación, intentamos al menos insertar en public.users manualmente
+          // pero es probable que el login falle si no se confirmó.
+          throw rpcError
         }
 
         // Asignar roles si se proporcionaron
         if (userData.roleIds && userData.roleIds.length > 0) {
           const userRoles = userData.roleIds.map(roleId => ({
-            user_id: createdUser.id,
+            user_id: newUserId,
             role_id: roleId
           }))
 
@@ -261,11 +279,11 @@ export function useSupabaseUsers() {
         }
 
         // Usar el ID de Supabase
-        newUser.id = createdUser.id
-        newUser.createdAt = createdUser.created_at
+        newUser.id = newUserId
+        // newUser.createdAt = ... (ya se creó)
         supabaseSuccess = true
 
-        console.log('✅ Usuario creado en Supabase:', newUser.email)
+        console.log('✅ Usuario creado y confirmado exitosamente:', newUser.email)
         
       } catch (error: any) {
         console.error('❌ Error creating user in Supabase:', error)
@@ -279,13 +297,14 @@ export function useSupabaseUsers() {
           return false
         }
         
-        // Otros errores de Supabase - continuar con localStorage
-        console.log(`⚠️ Supabase error, saving locally only: ${error.message}`)
-        toast.error(`Error en Supabase: ${error.message}. Guardando solo localmente.`)
+        // Otros errores de Supabase - NO continuar con localStorage
+        console.log(`⚠️ Supabase error: ${error.message}`)
+        toast.error(`Error en Supabase: ${error.message}. No se creó el usuario.`)
+        return false
       }
     }
 
-    // Guardar localmente (siempre, si no hay errores de duplicado)
+    // 3. Guardar localmente (Solo si Supabase fue exitoso o no está configurado)
     const updatedUsers = [...users, newUser]
     setUsers(updatedUsers)
     saveLocalUsers(updatedUsers)
@@ -293,10 +312,8 @@ export function useSupabaseUsers() {
     // Mostrar mensaje apropiado
     if (supabaseSuccess) {
       toast.success('Usuario creado exitosamente en Supabase y localmente')
-    } else if (!isSupabaseConfigured()) {
-      toast.success('Usuario creado localmente (Supabase no configurado)')
     } else {
-      toast.success('Usuario creado localmente')
+      toast.success('Usuario creado localmente (Supabase no configurado)')
     }
 
     return true
@@ -391,7 +408,13 @@ export function useSupabaseUsers() {
           return false
         }
         
-        toast.error(`Error en Supabase: ${error.message}. Actualizando solo localmente.`)
+        // Si es error de UUID inválido, es porque el usuario es local y no existe en Supabase
+        if (error.message.includes('invalid input syntax for type uuid')) {
+          console.log('Usuario local detectado (ID no es UUID), actualizando solo localmente')
+          // No mostramos error al usuario, es comportamiento esperado para usuarios legacy
+        } else {
+          toast.error(`Error en Supabase: ${error.message}. Actualizando solo localmente.`)
+        }
       }
     }
 
@@ -419,28 +442,44 @@ export function useSupabaseUsers() {
     // Intentar eliminar de Supabase primero
     if (isSupabaseConfigured()) {
       try {
-        // Eliminar relaciones de roles
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userId)
+        // Intentar usar la función RPC segura primero (borra de Auth y Public)
+        const { error: rpcError } = await supabase.rpc('delete_user_completely', { 
+          target_user_id: userId 
+        })
 
-        // Eliminar usuario
-        const { error } = await supabase
-          .from('users')
-          .delete()
-          .eq('id', userId)
+        if (rpcError) {
+          console.warn('RPC delete_user_completely falló, intentando método tradicional:', rpcError.message)
+          
+          // Fallback: Método tradicional (solo borra de public.users)
+          
+          // Limpiar dependencias manualmente para evitar errores de FK
+          console.log('🧹 Limpiando dependencias del usuario...')
+          await supabase.from('bets').delete().eq('user_id', userId)
+          await supabase.from('taquilla_sales').delete().eq('created_by', userId)
+          await supabase.from('api_keys').delete().eq('created_by', userId)
+          await supabase.from('taquillas').update({ activated_by: null }).eq('activated_by', userId)
+          await supabase.from('transfers').update({ created_by: null }).eq('created_by', userId)
+          await supabase.from('withdrawals').update({ created_by: null }).eq('created_by', userId)
 
-        if (error) {
-          if (error.message.includes('row-level security policy')) {
-            toast.error('No se puede eliminar el usuario debido a políticas de seguridad')
-            return false
+          // Eliminar relaciones de roles
+          await supabase.from('user_roles').delete().eq('user_id', userId)
+
+          // Eliminar usuario de public
+          const { error } = await supabase.from('users').delete().eq('id', userId)
+
+          if (error) {
+            if (error.message.includes('row-level security policy')) {
+              toast.error('No se puede eliminar el usuario debido a políticas de seguridad')
+              return false
+            }
+            throw error
           }
-          throw error
+          
+          toast.warning('Usuario eliminado de la lista, pero permanece en Auth (requiere limpieza manual)')
+        } else {
+          console.log('✅ Usuario eliminado completamente (Auth + Public)')
+          toast.success('Usuario eliminado del sistema permanentemente')
         }
-
-        console.log('✅ Usuario eliminado de Supabase')
-        toast.success('Usuario eliminado de Supabase y localmente')
         
       } catch (error: any) {
         console.error('Error deleting user from Supabase:', error)
@@ -578,6 +617,13 @@ export function useSupabaseUsers() {
         for (const user of deleteUsers) {
           try {
             // Eliminar relaciones primero
+            await supabase.from('bets').delete().eq('user_id', user.id)
+            await supabase.from('taquilla_sales').delete().eq('created_by', user.id)
+            await supabase.from('api_keys').delete().eq('created_by', user.id)
+            await supabase.from('taquillas').update({ activated_by: null }).eq('activated_by', user.id)
+            await supabase.from('transfers').update({ created_by: null }).eq('created_by', user.id)
+            await supabase.from('withdrawals').update({ created_by: null }).eq('created_by', user.id)
+
             await supabase
               .from('user_roles')
               .delete()
