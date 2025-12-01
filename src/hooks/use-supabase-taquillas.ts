@@ -68,7 +68,7 @@ export function useSupabaseTaquillas() {
     }
   }, [testConnection])
 
-  const createTaquilla = useCallback(async (input: Pick<Taquilla, 'fullName'|'address'|'telefono'|'email'|'password'|'username'>): Promise<boolean> => {
+  const createTaquilla = useCallback(async (input: Pick<Taquilla, 'fullName' | 'address' | 'telefono' | 'email' | 'password' | 'username'>): Promise<boolean> => {
     try {
       const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `taq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       const now = new Date().toISOString()
@@ -95,7 +95,7 @@ export function useSupabaseTaquillas() {
     }
   }, [taquillas])
 
-  const updateTaquilla = useCallback(async (id: string, updates: Partial<Pick<Taquilla,'fullName'|'address'|'telefono'|'email'|'password'>>): Promise<boolean> => {
+  const updateTaquilla = useCallback(async (id: string, updates: Partial<Pick<Taquilla, 'fullName' | 'address' | 'telefono' | 'email' | 'password'>>): Promise<boolean> => {
     try {
       let remoteOk = false
       let passwordHash: string | undefined
@@ -183,6 +183,10 @@ export function useSupabaseTaquillas() {
     try {
       let remoteOk = false
       if (await testConnection()) {
+        // Primero eliminar ventas asociadas para evitar errores de FK
+        await supabase.from('taquilla_sales').delete().eq('taquilla_id', id)
+
+        // Intentar eliminar la taquilla
         const { error } = await supabase.from('taquillas').delete().eq('id', id)
         if (!error) remoteOk = true
       }
@@ -193,6 +197,7 @@ export function useSupabaseTaquillas() {
       if (remoteOk) await loadTaquillas()
       return true
     } catch (e) {
+      console.error('Error deleting taquilla:', e)
       return false
     }
   }, [taquillas, testConnection, loadTaquillas])

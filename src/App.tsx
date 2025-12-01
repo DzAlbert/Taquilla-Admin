@@ -2553,6 +2553,56 @@ function App() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={deleteTaquillaDialogOpen} onOpenChange={setDeleteTaquillaDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash className="h-5 w-5 text-destructive" />
+              Eliminar Taquilla
+            </DialogTitle>
+            <DialogDescription className="pt-2 space-y-2">
+              <p className="font-medium">
+                ¿Está seguro de que desea eliminar esta taquilla?
+              </p>
+              <p className="text-sm">
+                Esta acción es permanente y no se puede deshacer. Se eliminarán todos los datos asociados a esta taquilla.
+              </p>
+              {taquillaToDelete && (
+                <div className="bg-muted p-3 rounded-md mt-3 space-y-1">
+                  <p className="text-sm">
+                    <span className="font-semibold">Nombre:</span>{" "}
+                    {taquillas.find(t => t.id === taquillaToDelete)?.fullName || "Desconocida"}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-semibold">Dirección:</span>{" "}
+                    {taquillas.find(t => t.id === taquillaToDelete)?.address || "Sin dirección"}
+                  </p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteTaquillaDialogOpen(false)
+                setTaquillaToDelete(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteTaquilla}
+              className="gap-2"
+            >
+              <Trash className="h-4 w-4" />
+              Eliminar Taquilla
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
