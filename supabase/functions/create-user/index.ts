@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
 
         // 3. Crear registro en public.users
         console.log('📊 Creando en public.users...')
+        console.log('📊 shareOnSales:', shareOnSales, 'shareOnProfits:', shareOnProfits)
         const { error: publicError } = await supabaseAdmin
             .from('users')
             .insert({
@@ -110,8 +111,8 @@ Deno.serve(async (req) => {
                 parent_id: parentId || null,   // Para jerarquía RLS
                 user_type: userType || 'admin',
                 address: address || null,
-                share_on_sales: shareOnSales || 0,
-                share_on_profits: shareOnProfits || 0,
+                share_on_sales: parseFloat(shareOnSales) || 0,
+                share_on_profits: parseFloat(shareOnProfits) || 0,
                 agencia_id: agenciaId || null,
                 comercializadora_id: comercializadoraId || null  // Para aislamiento RLS
             })

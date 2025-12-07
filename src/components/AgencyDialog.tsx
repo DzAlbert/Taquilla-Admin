@@ -18,7 +18,6 @@ interface Props {
 export function AgencyDialog({ open, onOpenChange, onSave, comercializadoras, agency, defaultCommercializerId }: Props) {
     const [name, setName] = useState('')
     const [address, setAddress] = useState('')
-    const [logo, setLogo] = useState('')
     const [commercializerId, setCommercializerId] = useState('')
     const [shareOnSales, setShareOnSales] = useState('')
     const [shareOnProfits, setShareOnProfits] = useState('')
@@ -29,11 +28,9 @@ export function AgencyDialog({ open, onOpenChange, onSave, comercializadoras, ag
 
     useEffect(() => {
         if (open) {
-            console.log('🔍 AgencyDialog opened, defaultCommercializerId:', defaultCommercializerId)
             if (agency) {
                 setName(agency.name)
                 setAddress(agency.address)
-                setLogo(agency.logo || '')
                 setCommercializerId(agency.commercializerId)
                 setShareOnSales((agency.shareOnSales || 0).toString())
                 setShareOnProfits((agency.shareOnProfits || 0).toString())
@@ -42,14 +39,11 @@ export function AgencyDialog({ open, onOpenChange, onSave, comercializadoras, ag
             } else {
                 setName('')
                 setAddress('')
-                setLogo('')
-                console.log('⚙️ Setting commercializerId to:', defaultCommercializerId || '')
                 setCommercializerId(defaultCommercializerId || '')
                 setShareOnSales('')
                 setShareOnProfits('')
                 setEmail('')
                 setPassword('')
-                console.log('✅ commercializerId state set, value should be:', defaultCommercializerId)
             }
             setErrors({})
         }
@@ -94,11 +88,9 @@ export function AgencyDialog({ open, onOpenChange, onSave, comercializadoras, ag
         const ok = await onSave({
             name,
             address,
-            logo: logo || undefined,
             commercializerId,
             shareOnSales: parseFloat(shareOnSales),
             shareOnProfits: parseFloat(shareOnProfits),
-            // Solo enviar email y password al crear (no al editar)
             ...((!agency && email && password) && {
                 userEmail: email,
                 userPassword: password
@@ -145,15 +137,6 @@ export function AgencyDialog({ open, onOpenChange, onSave, comercializadoras, ag
                             className={errors.address ? "border-destructive" : ""}
                         />
                         {errors.address && <p className="text-xs text-destructive">{errors.address}</p>}
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label>Logo (URL Opcional)</Label>
-                        <Input
-                            value={logo}
-                            onChange={e => setLogo(e.target.value)}
-                            placeholder="https://ejemplo.com/logo.png"
-                        />
                     </div>
 
                     {/* Email y Password solo al crear */}
@@ -237,7 +220,7 @@ export function AgencyDialog({ open, onOpenChange, onSave, comercializadoras, ag
                             {errors.shareOnSales && <p className="text-xs text-destructive">{errors.shareOnSales}</p>}
                         </div>
                         <div className="grid gap-2">
-                            <Label>% Ganancias</Label>
+                            <Label>% Participación</Label>
                             <Input
                                 type="number"
                                 value={shareOnProfits}

@@ -236,7 +236,7 @@ export function ComercializadoraDialog({
                             </p>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="shareOnProfits">Participación en Ganancias (%)</Label>
+                            <Label htmlFor="shareOnProfits">Participación (%)</Label>
                             <Input
                                 id="shareOnProfits"
                                 type="number"

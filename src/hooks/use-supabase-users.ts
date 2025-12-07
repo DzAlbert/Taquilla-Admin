@@ -195,7 +195,12 @@ export function useSupabaseUsers() {
       roleIds: userData.roleIds || [],
       isActive: userData.isActive,
       createdAt: new Date().toISOString(),
-      createdBy: userData.createdBy || 'local-system'
+      createdBy: userData.createdBy || 'local-system',
+      address: userData.address,
+      shareOnSales: userData.shareOnSales || 0,
+      shareOnProfits: userData.shareOnProfits || 0,
+      agenciaId: userData.agenciaId,
+      comercializadoraId: userData.comercializadoraId
     }
 
     let supabaseSuccess = false

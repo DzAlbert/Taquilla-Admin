@@ -36,15 +36,22 @@ export function ComercializadorasTab({
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editingComercializadora, setEditingComercializadora] = useState<Comercializadora | undefined>()
     const [search, setSearch] = useState('')
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [comercializadoraToDelete, setComercializadoraToDelete] = useState<Comercializadora | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
 
-    const filteredComercializadoras = comercializadoras.filter(c =>
-        search === '' ||
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.email.toLowerCase().includes(search.toLowerCase())
-    )
+    const filteredComercializadoras = comercializadoras.filter(c => {
+        const matchesSearch = search === '' ||
+            c.name.toLowerCase().includes(search.toLowerCase()) ||
+            c.email.toLowerCase().includes(search.toLowerCase())
+
+        const matchesStatus = statusFilter === 'all' ||
+            (statusFilter === 'active' && c.isActive) ||
+            (statusFilter === 'inactive' && !c.isActive)
+
+        return matchesSearch && matchesStatus
+    })
 
     const handleCreate = () => {
         setEditingComercializadora(undefined)
@@ -125,30 +132,32 @@ export function ComercializadorasTab({
                             </div>
                         </div>
 
-                        {/* Estadísticas */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Card>
-                                <CardHeader className="pb-3">
-                                    <CardDescription>Total</CardDescription>
-                                    <CardTitle className="text-3xl">{comercializadoras.length}</CardTitle>
-                                </CardHeader>
-                            </Card>
-                            <Card>
-                                <CardHeader className="pb-3">
-                                    <CardDescription>Activas</CardDescription>
-                                    <CardTitle className="text-3xl text-green-600">
-                                        {comercializadoras.filter(c => c.isActive).length}
-                                    </CardTitle>
-                                </CardHeader>
-                            </Card>
-                            <Card>
-                                <CardHeader className="pb-3">
-                                    <CardDescription>Inactivas</CardDescription>
-                                    <CardTitle className="text-3xl text-red-600">
-                                        {comercializadoras.filter(c => !c.isActive).length}
-                                    </CardTitle>
-                                </CardHeader>
-                            </Card>
+                        {/* Estadísticas - Filtros clickeables */}
+                        <div className="flex gap-2">
+                            <Button
+                                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setStatusFilter('all')}
+                                className="h-8"
+                            >
+                                Total: {comercializadoras.length}
+                            </Button>
+                            <Button
+                                variant={statusFilter === 'active' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setStatusFilter('active')}
+                                className={`h-8 ${statusFilter === 'active' ? 'bg-green-600 hover:bg-green-700' : 'text-green-600 border-green-600 hover:bg-green-50'}`}
+                            >
+                                Activas: {comercializadoras.filter(c => c.isActive).length}
+                            </Button>
+                            <Button
+                                variant={statusFilter === 'inactive' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setStatusFilter('inactive')}
+                                className={`h-8 ${statusFilter === 'inactive' ? 'bg-red-600 hover:bg-red-700' : 'text-red-600 border-red-600 hover:bg-red-50'}`}
+                            >
+                                Inactivas: {comercializadoras.filter(c => !c.isActive).length}
+                            </Button>
                         </div>
 
                         {/* Tabla */}
@@ -205,7 +214,7 @@ export function ComercializadorasTab({
                                                             Ventas: {comercializadora.shareOnSales}%
                                                         </Badge>
                                                         <Badge variant="outline" className="w-fit">
-                                                            Ganancias: {comercializadora.shareOnProfits}%
+                                                            Participación: {comercializadora.shareOnProfits}%
                                                         </Badge>
                                                     </div>
                                                 </TableCell>
@@ -227,32 +236,12 @@ export function ComercializadorasTab({
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        {!comercializadora.isDefault && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleSetDefault(comercializadora.id)}
-                                                                title="Marcar como predeterminada"
-                                                            >
-                                                                <Star size={16} />
-                                                            </Button>
-                                                        )}
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => handleEdit(comercializadora)}
                                                         >
                                                             <Pencil size={16} />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                            onClick={() => handleDeleteClick(comercializadora)}
-                                                            disabled={comercializadora.isDefault}
-                                                            title={comercializadora.isDefault ? 'No se puede eliminar la predeterminada' : 'Eliminar'}
-                                                        >
-                                                            <Trash size={16} />
                                                         </Button>
                                                     </div>
                                                 </TableCell>

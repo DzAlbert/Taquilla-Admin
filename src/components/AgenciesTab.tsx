@@ -240,7 +240,7 @@ export function AgenciesTab({ comercializadoras, agencies, isLoading, onCreate, 
                                             <span className="text-muted-foreground block">Participación</span>
                                             <div className="flex flex-col text-xs font-medium">
                                                 <span>Ventas: {agency.shareOnSales}%</span>
-                                                <span>Ganancias: {agency.shareOnProfits}%</span>
+                                                <span>Participación: {agency.shareOnProfits}%</span>
                                             </div>
                                         </div>
                                     </div>
