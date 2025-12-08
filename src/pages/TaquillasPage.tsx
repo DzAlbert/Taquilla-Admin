@@ -19,8 +19,7 @@ export function TaquillasPage() {
     visibleTaquillas,
     visibleAgencies,
     createTaquilla,
-    updateTaquilla,
-    taquillaSales
+    updateTaquilla
   } = useApp()
 
   const [taquillaDialogOpen, setTaquillaDialogOpen] = useState(false)
@@ -254,7 +253,6 @@ export function TaquillasPage() {
         open={taquillaStatsOpen}
         onOpenChange={setTaquillaStatsOpen}
         taquilla={taquillaStats}
-        sales={taquillaSales.filter(s => s.taquillaId === taquillaStats?.id)}
       />
     </div>
   )
