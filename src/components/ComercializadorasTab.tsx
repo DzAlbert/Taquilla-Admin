@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Plus, Pencil, Trash, MagnifyingGlass, CheckCircle, XCircle, Star, Warning } from "@phosphor-icons/react"
+import { Plus, Pencil, Trash, MagnifyingGlass, CheckCircle, XCircle, Warning } from "@phosphor-icons/react"
 import { Comercializadora, User } from "@/lib/types"
 import { ComercializadoraDialog } from "./ComercializadoraDialog"
 import { format } from "date-fns"
@@ -18,7 +18,6 @@ interface ComercializadorasTabProps {
     onCreate: (comercializadora: Omit<Comercializadora, 'id' | 'createdAt'>) => Promise<boolean>
     onUpdate: (id: string, updates: Partial<Omit<Comercializadora, 'id' | 'createdAt'>>) => Promise<boolean>
     onDelete: (id: string) => Promise<void>
-    onSetDefault: (id: string) => Promise<boolean>
     currentUserId?: string
     createUser?: (userData: Omit<User, 'id' | 'createdAt'>) => Promise<boolean>
 }
@@ -29,22 +28,28 @@ export function ComercializadorasTab({
     onCreate,
     onUpdate,
     onDelete,
-    onSetDefault,
     currentUserId,
     createUser
 }: ComercializadorasTabProps) {
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editingComercializadora, setEditingComercializadora] = useState<Comercializadora | undefined>()
     const [search, setSearch] = useState('')
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [comercializadoraToDelete, setComercializadoraToDelete] = useState<Comercializadora | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
 
-    const filteredComercializadoras = comercializadoras.filter(c =>
-        search === '' ||
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.email.toLowerCase().includes(search.toLowerCase())
-    )
+    const filteredComercializadoras = comercializadoras.filter(c => {
+        const matchesSearch = search === '' ||
+            c.name.toLowerCase().includes(search.toLowerCase()) ||
+            c.email.toLowerCase().includes(search.toLowerCase())
+
+        const matchesStatus = statusFilter === 'all' ||
+            (statusFilter === 'active' && c.isActive) ||
+            (statusFilter === 'inactive' && !c.isActive)
+
+        return matchesSearch && matchesStatus
+    })
 
     const handleCreate = () => {
         setEditingComercializadora(undefined)
@@ -64,15 +69,7 @@ export function ComercializadorasTab({
         }
     }
 
-    const handleSetDefault = async (id: string) => {
-        await onSetDefault(id)
-    }
-
     const handleDeleteClick = (comercializadora: Comercializadora) => {
-        if (comercializadora.isDefault) {
-            toast.error("No se puede eliminar la comercializadora predeterminada")
-            return
-        }
         setComercializadoraToDelete(comercializadora)
         setDeleteDialogOpen(true)
     }
@@ -125,30 +122,32 @@ export function ComercializadorasTab({
                             </div>
                         </div>
 
-                        {/* Estadísticas */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Card>
-                                <CardHeader className="pb-3">
-                                    <CardDescription>Total</CardDescription>
-                                    <CardTitle className="text-3xl">{comercializadoras.length}</CardTitle>
-                                </CardHeader>
-                            </Card>
-                            <Card>
-                                <CardHeader className="pb-3">
-                                    <CardDescription>Activas</CardDescription>
-                                    <CardTitle className="text-3xl text-green-600">
-                                        {comercializadoras.filter(c => c.isActive).length}
-                                    </CardTitle>
-                                </CardHeader>
-                            </Card>
-                            <Card>
-                                <CardHeader className="pb-3">
-                                    <CardDescription>Inactivas</CardDescription>
-                                    <CardTitle className="text-3xl text-red-600">
-                                        {comercializadoras.filter(c => !c.isActive).length}
-                                    </CardTitle>
-                                </CardHeader>
-                            </Card>
+                        {/* Estadísticas - Filtros clickeables */}
+                        <div className="flex gap-2">
+                            <Button
+                                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setStatusFilter('all')}
+                                className="h-8"
+                            >
+                                Total: {comercializadoras.length}
+                            </Button>
+                            <Button
+                                variant={statusFilter === 'active' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setStatusFilter('active')}
+                                className={`h-8 ${statusFilter === 'active' ? 'bg-green-600 hover:bg-green-700' : 'text-green-600 border-green-600 hover:bg-green-50'}`}
+                            >
+                                Activas: {comercializadoras.filter(c => c.isActive).length}
+                            </Button>
+                            <Button
+                                variant={statusFilter === 'inactive' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setStatusFilter('inactive')}
+                                className={`h-8 ${statusFilter === 'inactive' ? 'bg-red-600 hover:bg-red-700' : 'text-red-600 border-red-600 hover:bg-red-50'}`}
+                            >
+                                Inactivas: {comercializadoras.filter(c => !c.isActive).length}
+                            </Button>
                         </div>
 
                         {/* Tabla */}
@@ -186,15 +185,7 @@ export function ComercializadorasTab({
                                         {filteredComercializadoras.map((comercializadora) => (
                                             <TableRow key={comercializadora.id}>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-medium">{comercializadora.name}</span>
-                                                        {comercializadora.isDefault && (
-                                                            <Badge variant="default" className="gap-1">
-                                                                <Star weight="fill" size={12} />
-                                                                Por Defecto
-                                                            </Badge>
-                                                        )}
-                                                    </div>
+                                                    <span className="font-medium">{comercializadora.name}</span>
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground">
                                                     {comercializadora.email}
@@ -205,7 +196,7 @@ export function ComercializadorasTab({
                                                             Ventas: {comercializadora.shareOnSales}%
                                                         </Badge>
                                                         <Badge variant="outline" className="w-fit">
-                                                            Ganancias: {comercializadora.shareOnProfits}%
+                                                            Participación: {comercializadora.shareOnProfits}%
                                                         </Badge>
                                                     </div>
                                                 </TableCell>
@@ -227,32 +218,12 @@ export function ComercializadorasTab({
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        {!comercializadora.isDefault && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleSetDefault(comercializadora.id)}
-                                                                title="Marcar como predeterminada"
-                                                            >
-                                                                <Star size={16} />
-                                                            </Button>
-                                                        )}
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => handleEdit(comercializadora)}
                                                         >
                                                             <Pencil size={16} />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                            onClick={() => handleDeleteClick(comercializadora)}
-                                                            disabled={comercializadora.isDefault}
-                                                            title={comercializadora.isDefault ? 'No se puede eliminar la predeterminada' : 'Eliminar'}
-                                                        >
-                                                            <Trash size={16} />
                                                         </Button>
                                                     </div>
                                                 </TableCell>

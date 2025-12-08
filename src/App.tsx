@@ -1,5 +1,6 @@
-import { useKV } from "@github/spark/hooks"
+
 import { useState, useEffect } from "react"
+import { Navigate } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -59,51 +60,32 @@ function App() {
 
   const { currentUser, currentUserId, isLoading, login, logout, hasPermission } = useSupabaseAuth()
 
-  // DEBUG: Ver currentUser
-  useEffect(() => {
-    if (currentUser) {
-      console.log('👤 CurrentUser en App:', currentUser)
-    }
-  }, [currentUser])
-
   // Helper para determinar si el usuario puede ver un módulo (userType + permisos)
   const canViewModule = (module: string): boolean => {
     if (!currentUser) {
-      console.log('❌ canViewModule: No currentUser')
       return false
     }
 
-    console.log('🔍 canViewModule:', { module, userType: currentUser.userType, email: currentUser.email })
-
     // Para Admins: usar el sistema de permisos
     if (currentUser.userType === 'admin' || !currentUser.userType) {
-      const hasPermissionResult = hasPermission(module)
-      console.log(`👤 Admin checking permission for ${module}:`, hasPermissionResult)
-      return hasPermissionResult
+      return hasPermission(module)
     }
 
     // Para Comercializadores: solo pueden ver Agencias
     if (currentUser.userType === 'comercializadora') {
-      const canView = module === 'agencias'
-      console.log(`🏢 Comercializadora checking ${module}:`, canView)
-      return canView
+      return module === 'agencias'
     }
 
     // Para Agencias: SOLO pueden ver Taquillas
     if (currentUser.userType === 'agencia') {
-      const canView = ['taquillas'].includes(module)
-      console.log(`🏪 Agencia checking ${module}:`, canView)
-      return canView
+      return ['taquillas'].includes(module)
     }
 
     // Para Taquillas: solo ven su propio módulo
     if (currentUser.userType === 'taquilla') {
-      const canView = ['taquillas'].includes(module)
-      console.log(`🎫 Taquilla checking ${module}:`, canView)
-      return canView
+      return ['taquillas'].includes(module)
     }
 
-    console.log('❌ No userType match, denying access')
     return false
   }
 
@@ -114,7 +96,7 @@ function App() {
     createTransfer,
     deductFromPot,
     updatePotBalance
-  } = useSupabasePots()
+  } = useSupabasePots(!!currentUser)
 
   // Hook específico para retiros (Módulo 9)
   const {
@@ -134,7 +116,7 @@ function App() {
     deleteApiKey: deleteSupabaseApiKey,
     stats: apiKeysStats,
     testConnection: testApiKeysConnection
-  } = useSupabaseApiKeys()
+  } = useSupabaseApiKeys(!!currentUser)
 
   // Hook de Taquillas - Ahora las taquillas son usuarios con userType='taquilla'
   // El hook original se mantiene temporalmente para compatibilidad
@@ -159,7 +141,7 @@ function App() {
   // Comercializadoras definitions will be derived from supabaseUsers below
 
 
-  const [users, setUsers] = useKV<User[]>("users", [])
+  const [users, setUsers] = useState<User[]>([])
   // API Keys ahora se manejan completamente por el hook useSupabaseApiKeys
 
   const {
@@ -188,7 +170,7 @@ function App() {
     name: user.name,
     address: user.address || '',
     logo: undefined,
-    commercializerId: '',
+    parentId: user.parentId || '',
     shareOnSales: user.shareOnSales || 0,
     shareOnProfits: user.shareOnProfits || 0,
     currentBalance: 0,
@@ -206,7 +188,7 @@ function App() {
     email: user.email,
     username: user.email.split('@')[0],
     isApproved: user.isActive,
-    agencyId: user.agenciaId,
+    parentId: user.parentId,
     createdAt: user.createdAt,
     shareOnSales: user.shareOnSales || 0,
     shareOnProfits: user.shareOnProfits || 0
@@ -224,7 +206,6 @@ function App() {
       userId: user.id,
       shareOnSales: user.shareOnSales || 0,
       shareOnProfits: user.shareOnProfits || 0,
-      isDefault: false, // Default not yet supported in users table
       isActive: user.isActive,
       createdAt: user.createdAt,
       createdBy: user.createdBy,
@@ -262,33 +243,10 @@ function App() {
     return await deleteUser(id)
   }
 
-  const setDefaultComercializadora = async (id: string) => {
-    // Not implemented for users table yet
-    console.warn('Set default comercializadora not implemented regarding users table')
-    return true
-  }
-
   // Funciones para taquillas usando createUser/updateUser/deleteUser
   const createTaquilla = async (input: any) => {
-    // Determinar comercializadoraId: del input, del currentUser o buscar de la agencia
-    let comercializadoraId = input.comercializadoraId
-
-    // Si no viene, intentar obtenerlo del usuario actual
-    if (!comercializadoraId && currentUser?.comercializadoraId) {
-      comercializadoraId = currentUser.comercializadoraId
-    }
-
-    // Si aún no lo tenemos y hay agenciaId, buscar la comercializadora de esa agencia
-    if (!comercializadoraId && input.agencyId) {
-      const agency = agencies.find(a => a.id === input.agencyId)
-      if (agency?.commercializerId) {
-        comercializadoraId = agency.commercializerId
-      }
-    }
-
-    console.log('🎫 Creando taquilla:', input.fullName)
-    console.log('📍 AgenciaId:', input.agencyId)
-    console.log('🏢 ComercializadoraId:', comercializadoraId)
+    // parentId para taquilla = agencyId (la agencia a la que pertenece)
+    const parentId = input.agencyId || input.parentId
 
     const success = await createUser({
       name: input.fullName,
@@ -301,9 +259,7 @@ function App() {
       address: input.address || '',
       shareOnSales: input.shareOnSales || 0,
       shareOnProfits: input.shareOnProfits || 0,
-      agenciaId: input.agencyId,
-      // Para RLS jerárquico - MUY IMPORTANTE
-      comercializadoraId: comercializadoraId
+      parentId: parentId
     })
     return success
   }
@@ -349,7 +305,7 @@ function App() {
     deleteBet,
     markWinners,
     isConnected: betsConnected
-  } = useSupabaseBets()
+  } = useSupabaseBets(!!currentUser)
 
   // Hook para auto-reactivación de "Juega Mañana"
   const { onPlayTomorrowChange } = useAutoPlayTomorrow(supabaseLotteries, updateLottery)
@@ -488,7 +444,6 @@ function App() {
       setDeleteLotteryDialogOpen(false)
       setLotteryToDelete(null)
     } catch (error) {
-      console.error('Error deleting lottery:', error)
       toast.error("Error al eliminar lotería")
     }
   }
@@ -511,7 +466,6 @@ function App() {
         toast.error("Error al eliminar taquilla")
       }
     } catch (error) {
-      console.error('Error deleting taquilla:', error)
       toast.error("Error al eliminar taquilla")
     }
   }
@@ -522,8 +476,6 @@ function App() {
   }
 
   const handleSaveBet = async (bet: Bet) => {
-    console.log('🎯 handleSaveBet llamado con:', bet)
-
     // Crear la jugada en Supabase
     const success = await createBet({
       lotteryId: bet.lotteryId,
@@ -535,12 +487,9 @@ function App() {
       isWinner: false
     })
 
-    console.log('📊 Resultado de createBet:', success)
-
     if (success) {
       // Distribuir a los potes usando el hook
       await distributeBetToPots(bet.amount)
-      console.log('✅ Potes actualizados')
     }
   }
 
@@ -565,17 +514,12 @@ function App() {
   // Función para procesar ganadores automáticamente después de crear un sorteo
   const processWinnersAutomatically = async (drawData: any) => {
     try {
-      console.log('🎯 Procesando ganadores automáticamente...')
-      console.log('Animal ganador:', drawData.animalNumber, drawData.animalName)
-
       // Buscar todas las jugadas que apostaron al animal ganador de esta lotería
       const winningBets = currentBets.filter(bet =>
         bet.lotteryId === drawData.lotteryId &&
         bet.animalNumber === drawData.animalNumber &&
         !bet.isWinner // Solo las que aún no han ganado
       )
-
-      console.log(`📊 Encontradas ${winningBets.length} jugadas ganadoras`)
 
       if (winningBets.length === 0) {
         toast.info('Sorteo creado. No hay jugadas ganadoras para este animal.')
@@ -584,18 +528,15 @@ function App() {
 
       // Calcular total a pagar
       const totalPayout = winningBets.reduce((sum, bet) => sum + bet.potentialWin, 0)
-      console.log(`💰 Total a pagar: Bs. ${totalPayout}`)
 
       // Marcar todas las jugadas como ganadoras
       for (const bet of winningBets) {
         await updateBet(bet.id, { isWinner: true })
-        console.log(`✅ Jugada ${bet.id} marcada como ganadora - Premio: Bs. ${bet.potentialWin}`)
       }
 
       // Descontar del pote de premios
       if (totalPayout > 0) {
         await deductFromPot("Pote de Premios", totalPayout)
-        console.log(`💸 Descontado Bs. ${totalPayout} del Pote de Premios`)
       }
 
       toast.success(`🎉 ${winningBets.length} ganador${winningBets.length !== 1 ? 'es' : ''} registrado${winningBets.length !== 1 ? 's' : ''} automáticamente!`, {
@@ -604,7 +545,6 @@ function App() {
 
       return { winnersCount: winningBets.length, totalPayout }
     } catch (error) {
-      console.error('Error procesando ganadores:', error)
       toast.error('Error al procesar ganadores automáticamente')
       return { winnersCount: 0, totalPayout: 0 }
     }
@@ -649,7 +589,6 @@ function App() {
 
       return success
     } catch (error) {
-      console.error('Error in handleSaveRole:', error)
       return false
     }
   }
@@ -692,7 +631,6 @@ function App() {
       setEditingUser(undefined)
       return true
     } catch (error) {
-      console.error('Error saving user:', error)
       return false
     }
   }
@@ -716,7 +654,6 @@ function App() {
       setDeleteUserDialogOpen(false)
       setUserToDelete(null)
     } catch (error) {
-      console.error('Error deleting user:', error)
       toast.error("Error al eliminar usuario")
     }
   }
@@ -735,7 +672,6 @@ function App() {
       setDeleteDrawDialogOpen(false)
       setDrawToDelete(null)
     } catch (error) {
-      console.error('Error deleting draw:', error)
       toast.error("Error al eliminar sorteo")
     }
   }
@@ -802,7 +738,6 @@ function App() {
 
       setEditingApiKey(undefined)
     } catch (error) {
-      console.error('Error guardando API Key:', error)
       toast.error("Error guardando la API Key")
     }
   }
@@ -826,7 +761,6 @@ function App() {
         throw new Error("Error eliminando API Key")
       }
     } catch (error) {
-      console.error('Error eliminando API Key:', error)
       toast.error("Error eliminando la API Key")
     }
   }
@@ -919,7 +853,8 @@ function App() {
 
   // Calcular defaultAgencyId
   const getDefaultAgencyId = () => {
-    if (currentUser?.agenciaId) return currentUser.agenciaId
+    // Si el usuario es una agencia, su propio ID es la agencia
+    if (currentUser?.userType === 'agencia') return currentUser.id
     if (visibleAgencies.length === 1) return visibleAgencies[0].id
 
     // Buscar agencia que coincida con el email del usuario
@@ -986,7 +921,7 @@ function App() {
         </div>
       )
     }
-    return <LoginScreen onLogin={login} />
+    return <Navigate to="/login" replace />
   }
 
   return (
@@ -1294,7 +1229,7 @@ function App() {
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Premios:</span>
-                            <span className="font-medium">{lottery.prizes.length}</span>
+                            <span className="font-medium">{lottery.prizes?.length ?? 0}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Jugadas:</span>
@@ -2381,8 +2316,14 @@ function App() {
               isLoading={agenciesLoading}
               onCreate={async () => true}
               onUpdate={async (id, updates) => {
-                // Actualizar usuario
-                return await updateUser(id, { isActive: updates.isActive })
+                return await updateUser(id, {
+                  name: updates.name,
+                  address: updates.address,
+                  parentId: updates.parentId,
+                  shareOnSales: updates.shareOnSales,
+                  shareOnProfits: updates.shareOnProfits,
+                  isActive: updates.isActive
+                })
               }}
               onDelete={async (id) => {
                 // Eliminar usuario
@@ -2406,7 +2347,6 @@ function App() {
                   toast.error('No se pudo eliminar la comercializadora')
                 }
               }}
-              onSetDefault={setDefaultComercializadora}
               currentUserId={currentUserId}
               createUser={createUser}
             />
@@ -2478,11 +2418,7 @@ function App() {
 
             if (success) {
               // Procesar ganadores automáticamente
-              const { winnersCount, totalPayout } = await processWinnersAutomatically(drawData)
-
-              // Actualizar el sorteo con la información de ganadores y premios
-              // (El sorteo ya fue creado, solo actualizamos estos campos)
-              console.log(`✅ Sorteo creado con ${winnersCount} ganadores y Bs. ${totalPayout} en premios`)
+              await processWinnersAutomatically(drawData)
             }
             return success
           }

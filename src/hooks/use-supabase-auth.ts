@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
 export interface SupabaseUser {
@@ -16,16 +16,18 @@ export interface SupabaseUser {
     is_system: boolean
   }>
   all_permissions: string[]
-  // Relaciones con entidades de negocio
-  comercializadoraId?: string // Si userType === 'comercializadora'
-  agenciaId?: string // Si userType === 'agencia'
-  taquillaId?: string // Si userType === 'taquilla'
+  // Relación jerárquica
+  parentId?: string // ID del padre jerárquico
+  taquillaId?: string // ID específico si es taquilla
 }
 
 export function useSupabaseAuth() {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
+
+  // Ref para trackear el userId actual sin causar re-renders
+  const currentUserIdRef = useRef<string>('')
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -36,6 +38,7 @@ export function useSupabaseAuth() {
     // Verificar sesión actual
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        currentUserIdRef.current = session.user.id
         setCurrentUserId(session.user.id)
         loadUserData(session.user.id)
       } else {
@@ -44,11 +47,22 @@ export function useSupabaseAuth() {
     })
 
     // Escuchar cambios en la autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Solo recargar datos en eventos de login/logout, no en TOKEN_REFRESHED
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignorar TOKEN_REFRESHED para evitar recargas innecesarias
+      if (event === 'TOKEN_REFRESHED') {
+        return
+      }
+
       if (session?.user) {
-        setCurrentUserId(session.user.id)
-        loadUserData(session.user.id)
+        // Solo recargar si el usuario cambió
+        if (session.user.id !== currentUserIdRef.current) {
+          currentUserIdRef.current = session.user.id
+          setCurrentUserId(session.user.id)
+          loadUserData(session.user.id)
+        }
       } else {
+        currentUserIdRef.current = ''
         setCurrentUserId('')
         setCurrentUser(null)
         setIsLoading(false)
@@ -59,23 +73,38 @@ export function useSupabaseAuth() {
   }, [])
 
   const loadUserData = async (userId: string) => {
-    console.log('Loading user data for:', userId)
-
     try {
       setIsLoading(true)
 
       if (isSupabaseConfigured()) {
         try {
-          // Leer directamente de la tabla users para obtener user_type
+          // Leer usuario con parent_id de la tabla users
           const { data: userData, error } = await supabase
             .from('users')
-            .select('id, name, email, is_active, user_type')
+            .select('id, name, email, is_active, user_type, parent_id')
             .eq('id', userId)
             .single()
 
           if (!error && userData) {
+            // Verificar que no sea tipo taquilla y esté activo
+            if (userData.user_type === 'taquilla') {
+              await supabase.auth.signOut()
+              setCurrentUser(null)
+              setCurrentUserId('')
+              setIsLoading(false)
+              return
+            }
+
+            if (!userData.is_active) {
+              await supabase.auth.signOut()
+              setCurrentUser(null)
+              setCurrentUserId('')
+              setIsLoading(false)
+              return
+            }
+
             // Obtener roles completos con permisos (solo para admins)
-            const { data: userRolesData, error: rolesError } = await supabase
+            const { data: userRolesData } = await supabase
               .from('user_roles')
               .select('*, roles(*)')
               .eq('user_id', userId)
@@ -93,170 +122,10 @@ export function useSupabaseAuth() {
               return [...acc, ...role.permissions]
             }, [])
 
-            // Inicializar usuario base
-            let userType: 'admin' | 'comercializadora' | 'agencia' | 'taquilla' = 'admin' // Default
-            let comercializadoraId: string | undefined
-            let agenciaId: string | undefined
-            let taquillaId: string | undefined
+            // Determinar userType desde la base de datos
+            const userType = (userData.user_type as 'admin' | 'comercializadora' | 'agencia' | 'taquilla') || 'admin'
 
-            // PRIMERO: Leer user_type directamente de la tabla users
-            if (userData.user_type) {
-              userType = userData.user_type as 'admin' | 'comercializadora' | 'agencia' | 'taquilla'
-              console.log('🔍 UserType desde DB:', userType)
-            } else {
-              console.warn('⚠️ user_type no encontrado en userData, usando detección por relaciones')
-            }
-
-            // Buscar vinculación con Taquilla (SOLO si userType no está definido en DB)
-            if (!userData.user_type) {
-              try {
-                const { data: taq } = await supabase
-                  .from('taquillas')
-                  .select('id, agencia_id, comercializadora_id')
-                  .eq('user_id', userId)
-                  .maybeSingle()
-
-                if (taq) {
-                  userType = 'taquilla'
-                  taquillaId = taq.id
-                  agenciaId = taq.agencia_id
-                  comercializadoraId = taq.comercializadora_id
-                  console.log('Usuario tipo Taquilla (detectado por relación):', taq.id)
-                }
-              } catch (e) {
-                console.warn('Error checking taquilla link:', e)
-              }
-
-              // Si no es taquilla, buscar vinculación con Agencia
-              if (!taquillaId) {
-                try {
-                  const { data: ag } = await supabase
-                    .from('agencias')
-                    .select('id, comercializadora_id')
-                    .eq('user_id', userId)
-                    .maybeSingle()
-
-                  if (ag) {
-                    userType = 'agencia'
-                    agenciaId = ag.id
-                    comercializadoraId = ag.comercializadora_id
-                    console.log('Usuario tipo Agencia (detectado por relación):', ag.id)
-                  }
-                } catch (e) {
-                  console.warn('Error checking agencia link:', e)
-                }
-
-                // Fallback local para Agencia
-                if (!agenciaId) {
-                  try {
-                    const localAgencies = JSON.parse(localStorage.getItem('taquilla-agencies') || '[]')
-                    const myAgency = localAgencies.find((a: any) => a.userId === userId)
-                    if (myAgency) {
-                      userType = 'agencia'
-                      agenciaId = myAgency.id
-                      comercializadoraId = myAgency.commercializerId
-                      console.log('Usuario tipo Agencia (Local):', myAgency.id)
-                    }
-                  } catch (e) {
-                    console.warn('Error checking local agencia link:', e)
-                  }
-                }
-              }
-
-              // Si no es taquilla ni agencia, buscar vinculación con Comercializadora
-              if (!taquillaId && !agenciaId) {
-                try {
-                  const { data: com } = await supabase
-                    .from('comercializadoras')
-                    .select('id')
-                    .eq('user_id', userId)
-                    .maybeSingle()
-
-                  if (com) {
-                    userType = 'comercializadora'
-                    comercializadoraId = com.id
-                    console.log('Usuario tipo Comercializadora (detectado por relación):', com.id)
-                  }
-                } catch (e) {
-                  console.warn('Error checking comercializadora link:', e)
-                }
-
-                // Fallback local para Comercializadora
-                if (!comercializadoraId) {
-                  try {
-                    const localComs = JSON.parse(localStorage.getItem('comercializadoras_backup') || '[]')
-                    const myCom = localComs.find((c: any) => c.userId === userId)
-                    if (myCom) {
-                      userType = 'comercializadora'
-                      comercializadoraId = myCom.id
-                      console.log('Usuario tipo Comercializadora (Local):', myCom.id)
-                    }
-                  } catch (e) {
-                    console.warn('Error checking local comercializadora link:', e)
-                  }
-                }
-              }
-
-              // Si no tiene ninguna vinculación con entidades de negocio, es admin
-              if (!taquillaId && !agenciaId && !comercializadoraId) {
-                userType = 'admin'
-                console.log('Usuario tipo Admin (por defecto)')
-              }
-            } else {
-              console.log('✅ UserType ya definido en DB:', userData.user_type)
-
-              // Buscar IDs en Supabase según el tipo de usuario
-              if (userData.user_type === 'comercializadora') {
-                try {
-                  const { data: com } = await supabase
-                    .from('comercializadoras')
-                    .select('id')
-                    .eq('user_id', userId)
-                    .maybeSingle()
-
-                  if (com) {
-                    comercializadoraId = com.id
-                    console.log('✅ ComercializadoraId desde DB:', comercializadoraId)
-                  }
-                } catch (e) {
-                  console.warn('Error fetching comercializadoraId:', e)
-                }
-              } else if (userData.user_type === 'agencia') {
-                try {
-                  const { data: ag } = await supabase
-                    .from('agencias')
-                    .select('id, commercializer_id')
-                    .eq('user_id', userId)
-                    .maybeSingle()
-
-                  if (ag) {
-                    agenciaId = ag.id
-                    comercializadoraId = ag.commercializer_id
-                    console.log('✅ AgenciaId desde DB:', agenciaId)
-                  }
-                } catch (e) {
-                  console.warn('Error fetching agenciaId:', e)
-                }
-              } else if (userData.user_type === 'taquilla') {
-                try {
-                  const { data: taq } = await supabase
-                    .from('taquillas')
-                    .select('id, agency_id')
-                    .eq('user_id', userId)
-                    .maybeSingle()
-
-                  if (taq) {
-                    taquillaId = taq.id
-                    agenciaId = taq.agency_id
-                    console.log('✅ TaquillaId desde DB:', taquillaId)
-                  }
-                } catch (e) {
-                  console.warn('Error fetching taquillaId:', e)
-                }
-              }
-            }
-
-            // Construir usuario con el tipo correcto
+            // Construir usuario - ahora solo usamos parentId para relaciones jerárquicas
             const user: SupabaseUser = {
               id: userData.id,
               name: userData.name,
@@ -264,19 +133,17 @@ export function useSupabaseAuth() {
               is_active: userData.is_active,
               userType,
               roles: roles,
-              all_permissions: [...new Set(allPermissions)], // Eliminar duplicados
-              comercializadoraId,
-              agenciaId,
-              taquillaId
+              all_permissions: [...new Set(allPermissions)],
+              parentId: userData.parent_id,
+              taquillaId: userType === 'taquilla' ? userData.id : undefined
             }
 
-            console.log('Usuario cargado:', user.email, 'Tipo:', user.userType, 'Permisos:', user.all_permissions)
             setCurrentUser(user)
             setIsLoading(false)
             return
           }
         } catch (supabaseError) {
-          console.log('Error cargando usuario de Supabase:', supabaseError)
+          // Error loading user from Supabase
         }
       }
 
@@ -284,7 +151,7 @@ export function useSupabaseAuth() {
       setCurrentUser(null)
 
     } catch (error) {
-      console.error('Error in loadUserData:', error)
+      // Error in loadUserData
       setCurrentUser(null)
     } finally {
       setIsLoading(false)
@@ -303,19 +170,40 @@ export function useSupabaseAuth() {
       })
 
       if (error) {
-        console.error('Login error:', error)
         return { success: false, error: 'Credenciales incorrectas o error de conexión' }
       }
 
       if (data.user) {
-        console.log('Usuario autenticado:', data.user.email)
+        // Verificar tipo de usuario y estado activo antes de permitir acceso
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('user_type, is_active')
+          .eq('id', data.user.id)
+          .single()
+
+        if (userError || !userData) {
+          await supabase.auth.signOut()
+          return { success: false, error: 'No se pudo verificar el usuario' }
+        }
+
+        // No permitir acceso a usuarios tipo taquilla
+        if (userData.user_type === 'taquilla') {
+          await supabase.auth.signOut()
+          return { success: false, error: 'Los usuarios de tipo taquilla no tienen acceso a este sistema' }
+        }
+
+        // No permitir acceso a usuarios inactivos
+        if (!userData.is_active) {
+          await supabase.auth.signOut()
+          return { success: false, error: 'Su cuenta está desactivada. Contacte al administrador' }
+        }
+
         // La actualización del estado se maneja en onAuthStateChange
         return { success: true }
       }
 
       return { success: false, error: 'No se pudo iniciar sesión' }
     } catch (error) {
-      console.error('Login error:', error)
       return { success: false, error: 'Error al iniciar sesión' }
     }
   }
@@ -326,7 +214,7 @@ export function useSupabaseAuth() {
       setCurrentUserId('')
       setCurrentUser(null)
     } catch (error) {
-      console.error('Logout error:', error)
+      // Logout error
     }
   }
 
@@ -350,11 +238,13 @@ export function useSupabaseAuth() {
     // Admins con permisos adecuados pueden acceder a todo
     if (currentUser.userType === 'admin' && currentUser.all_permissions.includes('*')) return true
 
-    // Verificar acceso según el tipo de entidad
+    // Verificar acceso según el tipo de entidad usando parentId
     if (entityType === 'comercializadora') {
-      return currentUser.comercializadoraId === entityId
+      // Si es comercializadora, su ID es el entityId
+      return currentUser.userType === 'comercializadora' && currentUser.id === entityId
     } else if (entityType === 'agencia') {
-      return currentUser.agenciaId === entityId
+      // Si es agencia, su ID es el entityId, o si es comercializadora, el entityId es hijo
+      return currentUser.userType === 'agencia' && currentUser.id === entityId
     } else if (entityType === 'taquilla') {
       return currentUser.taquillaId === entityId
     }

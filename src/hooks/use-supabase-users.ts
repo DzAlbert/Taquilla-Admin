@@ -29,7 +29,8 @@ const getLocalUsers = (): User[] => {
     const stored = localStorage.getItem('users')
     return stored ? JSON.parse(stored) : []
   } catch (error) {
-    console.error('Error loading local users:', error)
+    // Error loading local users
+
     return []
   }
 }
@@ -37,9 +38,8 @@ const getLocalUsers = (): User[] => {
 const saveLocalUsers = (users: User[]): void => {
   try {
     localStorage.setItem('users', JSON.stringify(users))
-    console.log(`💾 Guardados ${users.length} usuarios localmente`)
   } catch (error) {
-    console.error('Error saving local users:', error)
+
   }
 }
 
@@ -55,7 +55,6 @@ export function useSupabaseUsers() {
 
     // Cargar usuarios locales primero
     const localUsers = getLocalUsers()
-    console.log(`📱 Cargados ${localUsers.length} usuarios desde localStorage`)
 
     if (!isSupabaseConfigured()) {
       // Solo usar usuarios locales + usuarios por defecto si Supabase no está configurado
@@ -97,10 +96,9 @@ export function useSupabaseUsers() {
           created_by,
           user_type,
           address,
+          phone,
           share_on_sales,
           share_on_profits,
-          comercializadora_id,
-          agencia_id,
           parent_id
         `)
         .order('created_at', { ascending: true })
@@ -124,21 +122,19 @@ export function useSupabaseUsers() {
             email: user.email,
             userType: user.user_type,
             address: user.address,
+            phone: user.phone,
             shareOnSales: parseFloat(user.share_on_sales) || 0,
             shareOnProfits: parseFloat(user.share_on_profits) || 0,
             roleIds: roleIds,
             isActive: user.is_active,
             createdAt: user.created_at,
             createdBy: user.created_by || 'system',
-            // Campos para RLS jerárquico
-            comercializadoraId: user.comercializadora_id,
-            agenciaId: user.agencia_id,
             parentId: user.parent_id
           }
         })
       )
 
-      console.log(`☁️ Cargados ${usersWithRoles.length} usuarios desde Supabase con sus roles`)
+
 
       // Combinar usuarios de Supabase con locales (prioridad a Supabase)
       const combinedUsers: User[] = [...usersWithRoles]
@@ -154,7 +150,7 @@ export function useSupabaseUsers() {
       saveLocalUsers(combinedUsers)
 
     } catch (error: any) {
-      console.error('Error loading users from Supabase:', error)
+
       setError(error.message || 'Error al cargar usuarios')
       toast.error('Error al cargar usuarios desde Supabase, usando datos locales')
 
@@ -196,7 +192,12 @@ export function useSupabaseUsers() {
       roleIds: userData.roleIds || [],
       isActive: userData.isActive,
       createdAt: new Date().toISOString(),
-      createdBy: userData.createdBy || 'local-system'
+      createdBy: userData.createdBy || 'local-system',
+      address: userData.address,
+      phone: userData.phone,
+      shareOnSales: userData.shareOnSales || 0,
+      shareOnProfits: userData.shareOnProfits || 0,
+      parentId: userData.parentId
     }
 
     let supabaseSuccess = false
@@ -204,7 +205,7 @@ export function useSupabaseUsers() {
     // 2. Intentar crear en Supabase usando Edge Function
     if (isSupabaseConfigured()) {
       try {
-        console.log(`📝 Creando usuario ${userData.email} con Edge Function...`)
+
 
         // Obtener sesión para auth
         const { data: session } = await supabase.auth.getSession()
@@ -233,11 +234,10 @@ export function useSupabaseUsers() {
               userType: userData.userType || 'admin',
               isActive: userData.isActive ?? true,
               address: userData.address || null,
+              phone: userData.phone || null,
               shareOnSales: userData.shareOnSales || 0,
               shareOnProfits: userData.shareOnProfits || 0,
-              agenciaId: userData.agenciaId || null,
-              comercializadoraId: userData.comercializadoraId || null,  // Para RLS jerárquico
-              parentId: userData.createdBy || null  // ID del usuario padre para RLS
+              parentId: userData.parentId || null
             })
           }
         )
@@ -252,11 +252,11 @@ export function useSupabaseUsers() {
         // Usuario creado exitosamente
         newUser.id = result.userId
         supabaseSuccess = true
-        console.log('✅ Usuario creado completamente:', result)
+
         toast.success('Usuario creado en Authentication y base de datos')
 
       } catch (error: any) {
-        console.error('❌ Error creando usuario:', error)
+
 
         // Manejo de errores específicos
         if (error.message.includes('ya está registrado')) {
@@ -315,13 +315,19 @@ export function useSupabaseUsers() {
           }
         }
 
+        const updateData: any = {}
+        if (userData.name !== undefined) updateData.name = userData.name
+        if (userData.email !== undefined) updateData.email = userData.email
+        if (userData.isActive !== undefined) updateData.is_active = userData.isActive
+        if (userData.address !== undefined) updateData.address = userData.address
+        if (userData.phone !== undefined) updateData.phone = userData.phone
+        if (userData.parentId !== undefined) updateData.parent_id = userData.parentId
+        if (userData.shareOnSales !== undefined) updateData.share_on_sales = userData.shareOnSales
+        if (userData.shareOnProfits !== undefined) updateData.share_on_profits = userData.shareOnProfits
+
         const { error } = await supabase
           .from('users')
-          .update({
-            name: userData.name,
-            email: userData.email,
-            is_active: userData.isActive,
-          })
+          .update(updateData)
           .eq('id', userId)
 
         if (error) {
@@ -353,16 +359,15 @@ export function useSupabaseUsers() {
               .insert(userRoles)
 
             if (rolesError) {
-              console.error('Error actualizando roles:', rolesError)
+
             }
           }
         }
 
         supabaseSuccess = true
-        console.log('✅ Usuario actualizado en Supabase')
 
       } catch (error: any) {
-        console.error('Error updating user in Supabase:', error)
+
 
         // Si es error de duplicado, no continuar
         if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
@@ -372,7 +377,7 @@ export function useSupabaseUsers() {
 
         // Si es error de UUID inválido, es porque el usuario es local y no existe en Supabase
         if (error.message.includes('invalid input syntax for type uuid')) {
-          console.log('Usuario local detectado (ID no es UUID), actualizando solo localmente')
+
           // No mostramos error al usuario, es comportamiento esperado para usuarios legacy
         } else {
           toast.error(`Error en Supabase: ${error.message}. Actualizando solo localmente.`)
@@ -403,7 +408,7 @@ export function useSupabaseUsers() {
   const deleteUser = async (userId: string): Promise<boolean> => {
     if (isSupabaseConfigured()) {
       try {
-        console.log('🗑️ Eliminando usuario completamente:', userId)
+
 
         // Llamar a Edge Function que elimina de Auth + Public
         const { data: session } = await supabase.auth.getSession()
@@ -431,13 +436,13 @@ export function useSupabaseUsers() {
           console.error('Error de Edge Function:', result)
 
           // Fallback: Intentar método RPC tradicional
-          console.warn('Edge Function falló, intentando RPC fallback...')
+
           const { error: rpcError } = await supabase.rpc('delete_user_completely', {
             target_user_id: userId
           })
 
           if (rpcError) {
-            console.warn('RPC también falló:', rpcError.message)
+
 
             // Último recurso: solo borrar de public
             await supabase.from('user_roles').delete().eq('user_id', userId)
@@ -452,12 +457,12 @@ export function useSupabaseUsers() {
             toast.success('Usuario eliminado completamente')
           }
         } else {
-          console.log('✅ Usuario eliminado completamente:', result)
+
           toast.success('Usuario eliminado de Auth y base de datos')
         }
 
       } catch (error: any) {
-        console.error('Error eliminando usuario:', error)
+
         toast.error(`Error: ${error.message}`)
         return false
       }
@@ -521,11 +526,11 @@ export function useSupabaseUsers() {
 
           if (!error && newSupabaseUser && newSupabaseUser.length > 0) {
             syncedCount++
-            console.log(`📤 Usuario sincronizado: ${user.email}`)
+
           }
         }
       } catch (error) {
-        console.error(`Error sincronizando usuario ${user.email}:`, error)
+
       }
     }
 
@@ -545,7 +550,6 @@ export function useSupabaseUsers() {
     }
 
     try {
-      console.log('🧹 Iniciando limpieza de duplicados...')
       toast.info('Limpiando usuarios duplicados...')
 
       // Obtener todos los usuarios
@@ -556,7 +560,7 @@ export function useSupabaseUsers() {
 
       if (fetchError) throw fetchError
 
-      console.log(`📊 Total usuarios: ${allUsers.length}`)
+
 
       // Agrupar por email
       const emailGroups: { [key: string]: any[] } = {}
@@ -572,11 +576,11 @@ export function useSupabaseUsers() {
 
       if (duplicateEmails.length === 0) {
         toast.success('No se encontraron duplicados')
-        console.log('✅ No hay duplicados para limpiar')
+
         return
       }
 
-      console.log(`⚠️ Encontrados ${duplicateEmails.length} emails duplicados`)
+
 
       let deletedCount = 0
 
@@ -588,7 +592,7 @@ export function useSupabaseUsers() {
         const keepUser = duplicateUsers[0]
         const deleteUsers = duplicateUsers.slice(1)
 
-        console.log(`📧 ${email}: manteniendo ${keepUser.id}, eliminando ${deleteUsers.length}`)
+
 
         for (const user of deleteUsers) {
           try {
@@ -612,25 +616,25 @@ export function useSupabaseUsers() {
               .eq('id', user.id)
 
             if (deleteError) {
-              console.error(`❌ Error eliminando ${user.email}:`, deleteError)
+
             } else {
               deletedCount++
-              console.log(`🗑️ Eliminado: ${user.name} (${user.email})`)
+
             }
           } catch (error) {
-            console.error(`Error eliminando ${user.email}:`, error)
+
           }
         }
       }
 
       toast.success(`Limpieza completada! ${deletedCount} usuarios duplicados eliminados`)
-      console.log(`✅ Limpieza completada: ${deletedCount} usuarios eliminados`)
+
 
       // Recargar usuarios
       await loadUsers()
 
     } catch (error: any) {
-      console.error('Error limpiando duplicados:', error)
+
       toast.error(`Error limpiando duplicados: ${error.message}`)
     }
   }
