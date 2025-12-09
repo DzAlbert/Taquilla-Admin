@@ -1,19 +1,15 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Bet, DrawResult, Lottery, Transfer, Withdrawal, User, Role, ApiKey, Taquilla } from '@/lib/types'
-import { INITIAL_POTS, formatCurrency } from '@/lib/pot-utils'
+import { createContext, useContext, ReactNode } from 'react'
+import { Bet, Lottery, User, Role, ApiKey, DailyResult, Pot, Transfer } from '@/lib/types'
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth'
 import { useSupabaseRoles } from '@/hooks/use-supabase-roles'
 import { useSupabaseUsers } from '@/hooks/use-supabase-users'
 import { useSupabaseLotteries } from '@/hooks/use-supabase-lotteries'
-import { useSupabaseDraws } from '@/hooks/use-supabase-draws'
 import { useSupabaseBets } from '@/hooks/use-supabase-bets'
-import { useSupabasePots } from '@/hooks/use-supabase-pots'
-import { useSupabaseWithdrawals } from '@/hooks/use-supabase-withdrawals'
 import { useSupabaseApiKeys } from '@/hooks/use-supabase-apikeys'
-import { useSupabaseTaquillas } from '@/hooks/use-supabase-taquillas'
-import { useSupabaseTaquillaSales } from '@/hooks/use-supabase-taquilla-sales'
+import { useSupabasePots } from '@/hooks/use-supabase-pots'
 import { useAutoPlayTomorrow } from '@/hooks/use-auto-play-tomorrow'
-import { toast } from 'sonner'
+import { useDailyResults } from '@/hooks/use-daily-results'
+import { useWinners, Winner } from '@/hooks/use-winners'
 
 interface AppContextType {
   // Auth
@@ -25,18 +21,12 @@ interface AppContextType {
   canViewModule: (module: string) => boolean
 
   // Pots
-  pots: any[]
+  pots: Pot[]
   transfers: Transfer[]
-  distributeBetToPots: (amount: number) => Promise<void>
-  createTransfer: (from: string, to: string, amount: number) => Promise<void>
-  deductFromPot: (potName: string, amount: number) => Promise<void>
-  updatePotBalance: (potName: string, balance: number) => Promise<void>
-
-  // Withdrawals
-  withdrawals: Withdrawal[]
-  withdrawalsLoading: boolean
-  createWithdrawal: (pot: any, amount: number, updatePotBalanceWrapper: any) => Promise<boolean>
-  withdrawalStats: any
+  distributeBetToPots: (amount: number) => Promise<boolean>
+  createTransfer: (from: string, to: string, amount: number) => Promise<boolean>
+  deductFromPot: (potName: string, amount: number) => Promise<boolean>
+  updatePotBalance: (potName: string, balance: number) => Promise<boolean>
 
   // API Keys
   apiKeys: ApiKey[]
@@ -46,19 +36,12 @@ interface AppContextType {
   deleteApiKey: any
   apiKeysStats: any
 
-  // Taquillas
+  // Taquillas (derived from users)
   taquillas: any[]
   taquillasLoading: boolean
   createTaquilla: (input: any) => Promise<boolean>
   updateTaquilla: (id: string, updates: any) => Promise<boolean>
   deleteTaquilla: (id: string) => Promise<boolean>
-  approveTaquilla: (id: string) => Promise<boolean>
-  toggleTaquillaStatus: (id: string) => Promise<boolean>
-
-  // Taquilla Sales
-  taquillaSales: any[]
-  createTaquillaSale: any
-  deleteTaquillaSale: any
 
   // Users
   users: User[]
@@ -80,17 +63,28 @@ interface AppContextType {
   // Lotteries
   lotteries: Lottery[]
   lotteriesLoading: boolean
+  loadLotteries: () => Promise<void>
   createLottery: any
   updateLottery: any
   deleteLottery: any
   toggleLotteryStatus: any
 
-  // Draws
-  draws: DrawResult[]
-  drawsLoading: boolean
-  createDraw: any
-  updateDraw: any
-  deleteDraw: any
+  // Daily Results
+  dailyResults: DailyResult[]
+  dailyResultsLoading: boolean
+  loadDailyResults: (startDate?: string, endDate?: string) => Promise<void>
+  createDailyResult: (lotteryId: string, prizeId: string, resultDate: string) => Promise<boolean>
+  updateDailyResult: (id: string, updates: Partial<{ prizeId: string; totalToPay: number; totalRaised: number }>) => Promise<boolean>
+  deleteDailyResult: (id: string) => Promise<boolean>
+  getResultForLotteryAndDate: (lotteryId: string, date: string) => DailyResult | undefined
+  getWinnersForResult: (prizeId: string, resultDate: string) => Promise<Array<{
+    id: string
+    amount: number
+    potentialWin: number
+    taquillaId: string
+    taquillaName: string
+    createdAt: string
+  }>>
 
   // Bets
   bets: Bet[]
@@ -115,9 +109,13 @@ interface AppContextType {
   comercializadoras: any[]
   visibleAgencies: any[]
   visibleTaquillas: any[]
-  winners: Bet[]
   activeBets: Bet[]
   defaultAgencyId?: string
+
+  // Winners from bets_item_lottery_clasic
+  winners: Winner[]
+  winnersLoading: boolean
+  loadWinners: (startDate?: string, endDate?: string) => Promise<void>
 }
 
 const AppContext = createContext<AppContextType | null>(null)
@@ -148,7 +146,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return false
   }
 
-  // Pots
+  // Pots (local storage, no Supabase table)
   const {
     pots,
     transfers,
@@ -157,14 +155,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deductFromPot,
     updatePotBalance
   } = useSupabasePots(!!currentUser)
-
-  // Withdrawals
-  const {
-    withdrawals,
-    isLoading: withdrawalsLoading,
-    createWithdrawal,
-    withdrawalStats
-  } = useSupabaseWithdrawals()
 
   // API Keys
   const {
@@ -175,21 +165,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteApiKey,
     stats: apiKeysStats
   } = useSupabaseApiKeys(!!currentUser)
-
-  // Taquillas (old hook for compatibility)
-  const {
-    taquillas: oldTaquillas,
-    isLoading: oldTaquillasLoading,
-    approveTaquilla,
-    toggleTaquillaStatus
-  } = useSupabaseTaquillas(currentUser)
-
-  // Taquilla Sales
-  const {
-    sales: taquillaSales,
-    createSale: createTaquillaSale,
-    deleteSale: deleteTaquillaSale
-  } = useSupabaseTaquillaSales()
 
   // Roles
   const {
@@ -216,20 +191,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const {
     lotteries,
     isLoading: lotteriesLoading,
+    loadLotteries,
     createLottery,
     updateLottery,
     deleteLottery,
     toggleLotteryStatus
   } = useSupabaseLotteries()
 
-  // Draws
+  // Wrapper para recargar loterías
+  const reloadLotteries = async () => {
+    await loadLotteries()
+  }
+
+  // Daily Results
   const {
-    draws,
-    isLoading: drawsLoading,
-    createDraw,
-    updateDraw,
-    deleteDraw
-  } = useSupabaseDraws()
+    dailyResults,
+    loading: dailyResultsLoading,
+    loadDailyResults,
+    createDailyResult,
+    updateDailyResult,
+    deleteDailyResult,
+    getResultForLotteryAndDate,
+    getWinnersForResult
+  } = useDailyResults()
 
   // Bets
   const {
@@ -241,6 +225,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     markWinners,
     isConnected: betsConnected
   } = useSupabaseBets(!!currentUser)
+
+  // Winners from bets_item_lottery_clasic
+  const {
+    winners,
+    loading: winnersLoading,
+    loadWinners
+  } = useWinners()
 
   // Auto-play tomorrow
   useAutoPlayTomorrow(lotteries, updateLottery)
@@ -413,7 +404,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return undefined
   }
 
-  const winners = (bets || []).filter(b => b.isWinner)
   const activeBets = (bets || []).filter(b => !b.isWinner)
 
   const value: AppContextType = {
@@ -424,17 +414,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     hasPermission,
     canViewModule,
 
-    pots: pots || INITIAL_POTS,
-    transfers: transfers || [],
+    pots,
+    transfers,
     distributeBetToPots,
     createTransfer,
     deductFromPot,
     updatePotBalance,
-
-    withdrawals: withdrawals || [],
-    withdrawalsLoading,
-    createWithdrawal,
-    withdrawalStats,
 
     apiKeys: apiKeys || [],
     apiKeysLoading,
@@ -448,12 +433,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     createTaquilla,
     updateTaquilla,
     deleteTaquilla,
-    approveTaquilla,
-    toggleTaquillaStatus,
-
-    taquillaSales,
-    createTaquillaSale,
-    deleteTaquillaSale,
 
     users: supabaseUsers || [],
     usersLoading,
@@ -472,16 +451,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     lotteries: lotteries || [],
     lotteriesLoading,
+    loadLotteries: reloadLotteries,
     createLottery,
     updateLottery,
     deleteLottery,
     toggleLotteryStatus,
 
-    draws: draws || [],
-    drawsLoading,
-    createDraw,
-    updateDraw,
-    deleteDraw,
+    dailyResults: dailyResults || [],
+    dailyResultsLoading,
+    loadDailyResults,
+    createDailyResult,
+    updateDailyResult,
+    deleteDailyResult,
+    getResultForLotteryAndDate,
+    getWinnersForResult,
 
     bets: bets || [],
     betsLoading,
@@ -504,9 +487,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     comercializadoras,
     visibleAgencies,
     visibleTaquillas,
-    winners,
     activeBets,
-    defaultAgencyId: getDefaultAgencyId()
+    defaultAgencyId: getDefaultAgencyId(),
+
+    // Winners from bets_item_lottery_clasic
+    winners: winners || [],
+    winnersLoading,
+    loadWinners
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

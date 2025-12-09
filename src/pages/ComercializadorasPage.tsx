@@ -9,14 +9,15 @@ export function ComercializadorasPage() {
     createComercializadora,
     updateComercializadora,
     deleteComercializadora,
-    setDefaultComercializadora,
     currentUserId,
-    createUser
+    createUser,
+    agencies
   } = useApp()
 
   return (
     <ComercializadorasTab
       comercializadoras={comercializadoras}
+      agencies={agencies}
       isLoading={comercializadorasLoading}
       onCreate={createComercializadora}
       onUpdate={updateComercializadora}
@@ -26,7 +27,6 @@ export function ComercializadorasPage() {
           toast.error('No se pudo eliminar la comercializadora')
         }
       }}
-      onSetDefault={setDefaultComercializadora}
       currentUserId={currentUserId}
       createUser={createUser}
     />
