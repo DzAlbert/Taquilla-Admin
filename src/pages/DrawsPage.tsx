@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -8,8 +8,8 @@ import { useApp } from '@/contexts/AppContext'
 import { toast } from 'sonner'
 import { format, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks, isToday, isBefore, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { CaretLeft, CaretRight, Target, CheckCircle, Calendar, Warning } from '@phosphor-icons/react'
-import { ANIMALS } from '@/lib/types'
+import { CaretLeft, CaretRight, Target, CheckCircle, Calendar, Warning, Clock } from '@phosphor-icons/react'
+import { ANIMALS, Lottery } from '@/lib/types'
 
 export function DrawsPage() {
   const {
@@ -50,6 +50,22 @@ export function DrawsPage() {
 
   const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 })
 
+  // Verifica si la hora de juego de una lotería ya pasó para un día específico
+  const hasDrawTimePassed = useCallback((lottery: Lottery, day: Date): boolean => {
+    // Si no es hoy, la hora no aplica (días pasados siempre están disponibles, futuros nunca)
+    if (!isToday(day)) {
+      return isBefore(day, new Date()) // true para días pasados, false para futuros
+    }
+
+    // Para hoy, comparar la hora actual con la hora de juego
+    const now = new Date()
+    const [hours, minutes] = lottery.drawTime.split(':').map(Number)
+    const drawDateTime = new Date(day)
+    drawDateTime.setHours(hours, minutes, 0, 0)
+
+    return now >= drawDateTime
+  }, [])
+
   const goToPreviousWeek = () => {
     setCurrentWeekStart(subWeeks(currentWeekStart, 1))
   }
@@ -71,14 +87,14 @@ export function DrawsPage() {
       return
     }
 
-    // Solo permitir cargar resultados para hoy o días anteriores
-    if (isBefore(new Date(), date) && !isToday(date)) {
-      toast.error('No puedes cargar resultados para días futuros')
-      return
-    }
-
     const lottery = lotteries.find(l => l.id === lotteryId)
     if (!lottery) return
+
+    // Verificar si la hora de juego ya pasó
+    if (!hasDrawTimePassed(lottery, date)) {
+      toast.error('La hora de juego de esta lotería aún no ha llegado')
+      return
+    }
 
     setSelectedCell({ lotteryId, date: dateStr })
     setSelectedPrizeId('')
@@ -249,6 +265,9 @@ export function DrawsPage() {
                       const isPast = isBefore(day, new Date()) && !isTodayDate
                       const isFuture = isBefore(new Date(), day) && !isTodayDate
                       const isSelected = selectedCell?.lotteryId === lottery.id && selectedCell?.date === dateStr
+                      const drawTimePassed = hasDrawTimePassed(lottery, day)
+                      // Pendiente: es hoy pero la hora de juego aún no ha pasado
+                      const isPendingToday = isTodayDate && !drawTimePassed
 
                       return (
                         <td
@@ -267,9 +286,20 @@ export function DrawsPage() {
                               </span>
                               <CheckCircle className="h-3 w-3 text-emerald-500" weight="fill" />
                             </div>
-                          ) : isFuture ? (
-                            <div className="h-10 w-10 mx-auto rounded-lg bg-muted/30 flex items-center justify-center">
-                              <span className="text-xs text-muted-foreground">-</span>
+                          ) : isFuture || isPendingToday ? (
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className={`h-10 w-10 mx-auto rounded-lg flex items-center justify-center ${
+                                isPendingToday ? 'bg-blue-50 border border-blue-200' : 'bg-muted/30'
+                              }`}>
+                                {isPendingToday ? (
+                                  <Clock className="h-4 w-4 text-blue-400" />
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">-</span>
+                                )}
+                              </div>
+                              {isPendingToday && (
+                                <span className="text-[10px] text-blue-500">{lottery.drawTime}</span>
+                              )}
                             </div>
                           ) : isSelected ? (
                             <div className="space-y-1">
@@ -349,11 +379,17 @@ export function DrawsPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="h-6 w-6 rounded border-2 border-dashed border-primary/50"></div>
-          <span className="text-muted-foreground">Disponible para cargar (hoy)</span>
+          <span className="text-muted-foreground">Disponible para cargar</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-6 w-6 rounded border-2 border-dashed border-amber-300"></div>
           <span className="text-muted-foreground">Pendiente (días anteriores)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded bg-blue-50 border border-blue-200 flex items-center justify-center">
+            <Clock className="h-3 w-3 text-blue-400" />
+          </div>
+          <span className="text-muted-foreground">Esperando hora de juego</span>
         </div>
       </div>
 

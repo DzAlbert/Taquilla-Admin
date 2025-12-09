@@ -47,6 +47,8 @@ export interface DailyResult {
   prizeId: string
   resultDate: string // formato YYYY-MM-DD
   createdAt: string
+  totalToPay: number // Suma de potential_bet_amount de ganadores
+  totalRaised: number // Total ventas - total a pagar
   // Campos poblados desde relaciones
   lottery?: Lottery
   prize?: Prize

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { DailyResult } from '@/lib/types'
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns'
 
 export function useDailyResults() {
   const [dailyResults, setDailyResults] = useState<DailyResult[]>([])
@@ -20,6 +21,8 @@ export function useDailyResults() {
           prize_id,
           result_date,
           created_at,
+          total_to_pay,
+          total_raised,
           lotteries (
             id,
             name,
@@ -59,6 +62,8 @@ export function useDailyResults() {
         prizeId: item.prize_id,
         resultDate: item.result_date,
         createdAt: item.created_at,
+        totalToPay: item.total_to_pay || 0,
+        totalRaised: item.total_raised || 0,
         lottery: item.lotteries ? {
           id: item.lotteries.id,
           name: item.lotteries.name,
@@ -87,18 +92,120 @@ export function useDailyResults() {
     }
   }, [])
 
+  /**
+   * Calcula el total a pagar buscando en bets_item_lottery_clasic
+   * los items con el prize_id ganador y actualiza su status a 'winner'
+   */
+  const calculateWinnersAndTotals = useCallback(async (
+    lotteryId: string,
+    prizeId: string,
+    resultDate: string
+  ): Promise<{ totalToPay: number; totalRaised: number }> => {
+    try {
+      // Parsear la fecha para obtener el rango del día
+      const dateObj = parseISO(resultDate)
+      const dayStart = startOfDay(dateObj).toISOString()
+      const dayEnd = endOfDay(dateObj).toISOString()
+
+      // 1. Buscar todos los items de apuesta con el prize_id ganador para ese día
+      // Primero obtenemos los bets del día que correspondan a esta lotería
+      const { data: betsOfDay, error: betsError } = await supabase
+        .from('bets')
+        .select('id, amount')
+        .gte('created_at', dayStart)
+        .lte('created_at', dayEnd)
+
+      if (betsError) {
+        console.error('Error fetching bets:', betsError)
+        return { totalToPay: 0, totalRaised: 0 }
+      }
+
+      const betIds = (betsOfDay || []).map(b => b.id)
+
+      if (betIds.length === 0) {
+        return { totalToPay: 0, totalRaised: 0 }
+      }
+
+      // 2. Buscar los items de lotería clásica con el premio ganador
+      const { data: winningItems, error: itemsError } = await supabase
+        .from('bets_item_lottery_clasic')
+        .select('id, potential_bet_amount, amount')
+        .in('bets_id', betIds)
+        .eq('prize_id', prizeId)
+        .eq('status', 'active')
+
+      if (itemsError) {
+        console.error('Error fetching winning items:', itemsError)
+        return { totalToPay: 0, totalRaised: 0 }
+      }
+
+      // 3. Calcular total a pagar (suma de potential_bet_amount de ganadores)
+      const totalToPay = (winningItems || []).reduce((sum, item) => {
+        return sum + (Number(item.potential_bet_amount) || 0)
+      }, 0)
+
+      // 4. Actualizar status a 'winner' para los items ganadores
+      if (winningItems && winningItems.length > 0) {
+        const winningIds = winningItems.map(w => w.id)
+
+        const { error: updateError } = await supabase
+          .from('bets_item_lottery_clasic')
+          .update({ status: 'winner' })
+          .in('id', winningIds)
+
+        if (updateError) {
+          console.error('Error updating winner status:', updateError)
+        }
+      }
+
+      // 5. Calcular total recaudado del día para esta lotería
+      // Obtener todos los items de lotería clásica del día (no solo ganadores)
+      const { data: allItems, error: allItemsError } = await supabase
+        .from('bets_item_lottery_clasic')
+        .select('amount')
+        .in('bets_id', betIds)
+
+      if (allItemsError) {
+        console.error('Error fetching all items:', allItemsError)
+        return { totalToPay, totalRaised: 0 }
+      }
+
+      // Total recaudado = suma de amounts de todos los items - total a pagar
+      const totalSales = (allItems || []).reduce((sum, item) => {
+        return sum + (Number(item.amount) || 0)
+      }, 0)
+
+      const totalRaised = totalSales - totalToPay
+
+      return { totalToPay, totalRaised }
+    } catch (err) {
+      console.error('Error in calculateWinnersAndTotals:', err)
+      return { totalToPay: 0, totalRaised: 0 }
+    }
+  }, [])
+
   const createDailyResult = useCallback(async (
     lotteryId: string,
     prizeId: string,
     resultDate: string
   ): Promise<boolean> => {
     try {
+      // 1. Calcular ganadores y totales
+      const { totalToPay, totalRaised } = await calculateWinnersAndTotals(
+        lotteryId,
+        prizeId,
+        resultDate
+      )
+
+      // 2. Crear el registro de resultado diario
       const { data, error: insertError } = await supabase
         .from('daily_results')
         .insert({
           lottery_id: lotteryId,
           prize_id: prizeId,
-          result_date: resultDate
+          result_date: resultDate,
+          total_to_pay: totalToPay,
+          total_raised: totalRaised
         })
         .select()
         .single()
@@ -108,22 +215,24 @@ export function useDailyResults() {
         return false
       }
 
-      // Recargar resultados
+      // 3. Recargar resultados
       await loadDailyResults()
       return true
     } catch (err) {
       console.error('Error in createDailyResult:', err)
       return false
     }
-  }, [loadDailyResults])
+  }, [loadDailyResults, calculateWinnersAndTotals])
 
   const updateDailyResult = useCallback(async (
     id: string,
-    updates: Partial<{ prizeId: string }>
+    updates: Partial<{ prizeId: string; totalToPay: number; totalRaised: number }>
   ): Promise<boolean> => {
     try {
       const updateData: any = {}
       if (updates.prizeId !== undefined) updateData.prize_id = updates.prizeId
+      if (updates.totalToPay !== undefined) updateData.total_to_pay = updates.totalToPay
+      if (updates.totalRaised !== undefined) updateData.total_raised = updates.totalRaised
 
       const { error: updateError } = await supabase
         .from('daily_results')

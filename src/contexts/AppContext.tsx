@@ -73,7 +73,7 @@ interface AppContextType {
   dailyResultsLoading: boolean
   loadDailyResults: (startDate?: string, endDate?: string) => Promise<void>
   createDailyResult: (lotteryId: string, prizeId: string, resultDate: string) => Promise<boolean>
-  updateDailyResult: (id: string, updates: Partial<{ prizeId: string }>) => Promise<boolean>
+  updateDailyResult: (id: string, updates: Partial<{ prizeId: string; totalToPay: number; totalRaised: number }>) => Promise<boolean>
   deleteDailyResult: (id: string) => Promise<boolean>
   getResultForLotteryAndDate: (lotteryId: string, date: string) => DailyResult | undefined
 
