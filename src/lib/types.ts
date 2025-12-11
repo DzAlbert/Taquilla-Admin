@@ -97,6 +97,7 @@ export interface Taquilla {
   parentId?: string // ID de la agencia (relación jerárquica)
   shareOnSales?: number
   shareOnProfits?: number
+  salesLimit?: number // Límite de venta para la taquilla
 }
 
 export interface Agency {
@@ -149,13 +150,7 @@ export type ModulePermission =
   | "users"
   | "roles"
   | "api-keys"
-  | "taquillas"
-  | "taquillas.read"
-  | "taquillas.create"
-  | "agencias"
-  | "agencias.read"
-  | "agencias.create"
-  | "comercializadoras"
+  | "comercializadoras" // Incluye gestión de comercializadoras, agencias y taquillas
   | "porcentajes"
 
 export interface Role {
@@ -182,6 +177,7 @@ export interface User {
   phone?: string // Teléfono de contacto
   shareOnSales?: number // Porcentaje de participación sobre ventas
   shareOnProfits?: number // Porcentaje de participación sobre ganancias
+  salesLimit?: number // Límite de venta (solo para taquillas)
   // Relación jerárquica: agencia→comercializadora, taquilla→agencia
   parentId?: string // ID del padre jerárquico
 }
