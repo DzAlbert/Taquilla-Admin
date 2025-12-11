@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ComercializadorasTab } from '@/components/ComercializadorasTab'
 import { useApp } from '@/contexts/AppContext'
 import { toast } from 'sonner'
@@ -10,9 +12,28 @@ export function ComercializadorasPage() {
     updateComercializadora,
     deleteComercializadora,
     currentUserId,
+    currentUser,
     createUser,
     agencies
   } = useApp()
+
+  const navigate = useNavigate()
+
+  // Si el usuario es una comercializadora, redirigir directamente a sus agencias
+  useEffect(() => {
+    if (currentUser?.userType === 'comercializadora') {
+      navigate(`/comercializadoras/${currentUser.id}/agencias`, { replace: true })
+    }
+  }, [currentUser, navigate])
+
+  // Si es comercializadora, no mostrar nada mientras se redirige
+  if (currentUser?.userType === 'comercializadora') {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
 
   return (
     <ComercializadorasTab

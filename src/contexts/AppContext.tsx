@@ -128,20 +128,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const canViewModule = (module: string): boolean => {
     if (!currentUser) return false
 
+    // Admin usa el sistema de permisos por roles
     if (currentUser.userType === 'admin' || !currentUser.userType) {
       return hasPermission(module)
     }
 
+    // Comercializadora tiene acceso fijo a: dashboard, reports y comercializadoras (sus agencias/taquillas)
     if (currentUser.userType === 'comercializadora') {
-      return module === 'agencias'
+      return ['dashboard', 'reports', 'comercializadoras'].includes(module)
     }
 
+    // Agencia tiene acceso fijo a: dashboard y comercializadoras (sus taquillas)
     if (currentUser.userType === 'agencia') {
-      return ['taquillas'].includes(module)
+      return ['dashboard', 'comercializadoras'].includes(module)
     }
 
+    // Taquilla tiene acceso básico
     if (currentUser.userType === 'taquilla') {
-      return ['taquillas'].includes(module)
+      return ['dashboard'].includes(module)
     }
 
     return false

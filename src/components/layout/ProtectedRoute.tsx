@@ -31,24 +31,24 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
   const canViewModule = (module: string): boolean => {
     if (!currentUser) return false
 
-    // Para Admins: usar el sistema de permisos
+    // Para Admins: usar el sistema de permisos por roles
     if (currentUser.userType === 'admin' || !currentUser.userType) {
       return hasPermission(module)
     }
 
-    // Para Comercializadores: solo pueden ver Agencias
+    // Comercializadora tiene acceso fijo a: dashboard, reports y comercializadoras (sus agencias/taquillas)
     if (currentUser.userType === 'comercializadora') {
-      return module === 'agencias'
+      return ['dashboard', 'reports', 'comercializadoras'].includes(module)
     }
 
-    // Para Agencias: SOLO pueden ver Taquillas
+    // Agencia tiene acceso fijo a: dashboard y comercializadoras (sus taquillas)
     if (currentUser.userType === 'agencia') {
-      return ['taquillas'].includes(module)
+      return ['dashboard', 'comercializadoras'].includes(module)
     }
 
-    // Para Taquillas: solo ven su propio módulo
+    // Taquilla tiene acceso básico
     if (currentUser.userType === 'taquilla') {
-      return ['taquillas'].includes(module)
+      return ['dashboard'].includes(module)
     }
 
     return false

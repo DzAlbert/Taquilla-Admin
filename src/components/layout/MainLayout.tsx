@@ -22,17 +22,30 @@ import {
   UserCircle
 } from '@phosphor-icons/react'
 
-const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: Vault, permission: 'dashboard' },
-  { path: '/reports', label: 'Reportes', icon: ChartLine, permission: 'reports' },
-  { path: '/lotteries', label: 'Sorteos', icon: Calendar, permission: 'lotteries' },
-  { path: '/draws', label: 'Resultados', icon: Target, permission: 'draws.read' },
-  { path: '/winners', label: 'Ganadores', icon: Trophy, permission: 'winners' },
-  { path: '/users', label: 'Usuarios', icon: Users, permission: 'users' },
-  { path: '/roles', label: 'Roles', icon: ShieldCheck, permission: 'roles' },
-  { path: '/api-keys', label: 'API Keys', icon: Key, permission: 'api-keys' },
-  { path: '/comercializadoras', label: 'Comercializadoras', icon: Buildings, permission: 'comercializadoras' },
-]
+// Items de navegación base - el path de comercializadoras se ajusta según el tipo de usuario
+const getNavItems = (currentUser: any) => {
+  // Para comercializadoras, el link va directo a sus agencias
+  const comercializadorasPath = currentUser?.userType === 'comercializadora'
+    ? `/comercializadoras/${currentUser.id}/agencias`
+    : '/comercializadoras'
+
+  // Para comercializadoras, el label es "Mis Agencias"
+  const comercializadorasLabel = currentUser?.userType === 'comercializadora'
+    ? 'Mis Agencias'
+    : 'Comercializadoras'
+
+  return [
+    { path: '/dashboard', label: 'Dashboard', icon: Vault, permission: 'dashboard' },
+    { path: '/reports', label: 'Reportes', icon: ChartLine, permission: 'reports' },
+    { path: '/lotteries', label: 'Sorteos', icon: Calendar, permission: 'lotteries' },
+    { path: '/draws', label: 'Resultados', icon: Target, permission: 'draws.read' },
+    { path: '/winners', label: 'Ganadores', icon: Trophy, permission: 'winners' },
+    { path: '/users', label: 'Usuarios', icon: Users, permission: 'users' },
+    { path: '/roles', label: 'Roles', icon: ShieldCheck, permission: 'roles' },
+    { path: '/api-keys', label: 'API Keys', icon: Key, permission: 'api-keys' },
+    { path: comercializadorasPath, label: comercializadorasLabel, icon: Buildings, permission: 'comercializadoras' },
+  ]
+}
 
 export function MainLayout() {
   const { currentUser, logout, canViewModule, updateUser } = useApp()
@@ -103,6 +116,7 @@ export function MainLayout() {
     }
   }
 
+  const navItems = getNavItems(currentUser)
   const visibleNavItems = navItems.filter(item => canViewModule(item.permission))
 
   return (
