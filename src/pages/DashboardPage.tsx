@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useApp } from '@/contexts/AppContext'
 import { useSalesStats } from '@/hooks/use-sales-stats'
 import { useComercializadoraStats } from '@/hooks/use-comercializadora-stats'
+import { useAgencyStats } from '@/hooks/use-agency-stats'
 import { formatCurrency } from '@/lib/pot-utils'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -50,10 +51,19 @@ export function DashboardPage() {
 
   const { stats: salesStats, loading: salesLoading, refresh: refreshSales } = useSalesStats({ visibleTaquillaIds })
 
-  // Stats de comercializadoras para la tabla semanal
+  // Determinar si el usuario es comercializadora
+  const isComercializadora = currentUser?.userType === 'comercializadora'
+
+  // Stats de comercializadoras para la tabla semanal (solo para admin)
   const { stats: comercializadoraStats, loading: comercializadoraStatsLoading, refresh: refreshComercializadoraStats } = useComercializadoraStats({
     comercializadoras: comercializadoras || [],
     agencies: visibleAgencies || agencies || [],
+    taquillas: visibleTaquillas || []
+  })
+
+  // Stats de agencias para la tabla semanal (para comercializadoras)
+  const { stats: agencyStats, loading: agencyStatsLoading, refresh: refreshAgencyStats } = useAgencyStats({
+    agencies: visibleAgencies || [],
     taquillas: visibleTaquillas || []
   })
 
@@ -109,10 +119,14 @@ export function DashboardPage() {
     loadDailyResults()
     loadWinners()
     refreshSales()
-    refreshComercializadoraStats()
+    if (isComercializadora) {
+      refreshAgencyStats()
+    } else {
+      refreshComercializadoraStats()
+    }
   }
 
-  const isLoading = dailyResultsLoading || winnersLoading || salesLoading || comercializadoraStatsLoading
+  const isLoading = dailyResultsLoading || winnersLoading || salesLoading || comercializadoraStatsLoading || agencyStatsLoading
 
   return (
     <div className="space-y-6">
@@ -445,8 +459,8 @@ export function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Ventas Semanales por Comercializadora */}
-      {comercializadoras && comercializadoras.length > 0 && (
+      {/* Ventas Semanales por Comercializadora (para admin) */}
+      {!isComercializadora && comercializadoras && comercializadoras.length > 0 && (
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-4">
@@ -485,6 +499,75 @@ export function DashboardPage() {
                               <Buildings className="h-4 w-4 text-white" weight="fill" />
                             </div>
                             <span className="font-medium">{stat.comercializadoraName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-blue-600">
+                          {formatCurrency(stat.weekSales)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-red-600">
+                          {formatCurrency(stat.weekPrizes)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end">
+                            <span className="font-medium text-amber-600">{formatCurrency(stat.salesCommission)}</span>
+                            <span className="text-xs text-muted-foreground">({stat.shareOnSales}%)</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={`font-bold ${stat.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {formatCurrency(stat.balance)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Ventas Semanales por Agencia (para comercializadoras) */}
+      {isComercializadora && visibleAgencies && visibleAgencies.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Storefront className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold">Ventas Semanales por Agencia</h3>
+              <Badge variant="outline" className="ml-auto text-xs">Esta Semana</Badge>
+            </div>
+            {agencyStatsLoading ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <ArrowsClockwise className="h-10 w-10 text-muted-foreground mb-2 animate-spin" />
+                <p className="text-sm text-muted-foreground">Cargando estadísticas...</p>
+              </div>
+            ) : agencyStats.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Storefront className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No hay agencias con ventas esta semana</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Agencia</TableHead>
+                      <TableHead className="text-right">Ventas</TableHead>
+                      <TableHead className="text-right">Premios</TableHead>
+                      <TableHead className="text-right">Comisión (%)</TableHead>
+                      <TableHead className="text-right">Balance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {agencyStats.map((stat) => (
+                      <TableRow key={stat.agencyId}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
+                              <Storefront className="h-4 w-4 text-white" weight="fill" />
+                            </div>
+                            <span className="font-medium">{stat.agencyName}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-right font-semibold text-blue-600">
